@@ -1,6 +1,7 @@
 import { getToken, clearSession } from '@/utils/session.js'
 
-export const API_BASE_URL = 'http://localhost:8080'
+import { API_BASE_URL, SERVER_CONFIG } from '@/config/server.js'
+export { API_BASE_URL }
 
 export class ApiError extends Error {
   constructor(message, statusCode, code = '') {
@@ -15,6 +16,9 @@ export function request({ path, method = 'GET', data, auth = false }) {
   const requestToken = auth ? getToken() : ''
   if (auth && !requestToken) {
     return Promise.reject(new ApiError('请先登录', 401))
+  }
+  if (SERVER_CONFIG.error) {
+    return Promise.reject(new ApiError(SERVER_CONFIG.error, -1, 'CLIENT_CONFIG_ERROR'))
   }
   const header = method === 'GET' ? {} : { 'Content-Type': 'application/json' }
   if (requestToken) header.Authorization = `Bearer ${requestToken}`

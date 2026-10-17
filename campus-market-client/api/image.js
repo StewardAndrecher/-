@@ -1,13 +1,15 @@
 import { API_BASE_URL, ApiError } from './request.js'
+import { SERVER_CONFIG } from '@/config/server.js'
 import { getToken, clearSession } from '@/utils/session.js'
 
 const ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 export function imageUrl(id) {
-  return typeof id === 'string' && ID_PATTERN.test(id) ? `${API_BASE_URL}/api/images/${id}` : ''
+  return !!API_BASE_URL && typeof id === 'string' && ID_PATTERN.test(id) ? `${API_BASE_URL}/api/images/${id}` : ''
 }
 export function uploadImage(filePath) {
   const token = getToken()
   if (!token) return Promise.reject(new ApiError('请先登录后上传图片', 401))
+  if (SERVER_CONFIG.error) return Promise.reject(new ApiError(SERVER_CONFIG.error, -1, 'CLIENT_CONFIG_ERROR'))
   return new Promise((resolve, reject) => {
     uni.uploadFile({
       url: `${API_BASE_URL}/api/images`, filePath, name: 'file', fileType: 'image',

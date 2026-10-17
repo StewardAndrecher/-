@@ -49,8 +49,9 @@ public class FavoriteRepository {
         return jdbc.query("""
                 SELECT f.product_id,
                        p.id, p.title, p.description, p.price_in_cents,
-                       p.status, p.cover_image_id, p.version,
-                       u.id AS seller_id, u.nickname AS seller_nickname
+                       p.status, p.cover_image_id, p.version, p.category_code,
+                       u.id AS seller_id, u.nickname AS seller_nickname,
+                       (SELECT COUNT(*) FROM product_favorites pf WHERE pf.product_id = p.id) AS favorite_count
                 FROM product_favorites f
                 LEFT JOIN products p ON p.id = f.product_id AND p.status = 'ON_SALE'
                 LEFT JOIN users u ON u.id = p.seller_id

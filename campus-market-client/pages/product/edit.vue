@@ -24,10 +24,11 @@
       <text class="label">价格（元）</text>
       <input v-model="draftPrice" class="field" type="digit" :maxlength="9"
         :disabled="saving || uploadingCover" placeholder="例如：35.50" />
+      <CategoryPicker v-model="draftCategory" :disabled="saving || uploadingCover" @ready="categoryReady = $event" />
       <ImagePicker v-model="draftCoverId" :disabled="saving" @busy="uploadingCover = $event" />
       <text v-if="errorMessage" class="error">{{ errorMessage }}</text>
       <button v-if="conflict" :disabled="saving || uploadingCover" @click="loadForEdit(true)">重新加载最新商品（替换草稿）</button>
-      <button type="primary" :disabled="saving || uploadingCover || conflict" :loading="saving" @click="saveProduct">
+      <button type="primary" :disabled="saving || uploadingCover || conflict || !categoryReady" :loading="saving" @click="saveProduct">
         {{ saving ? '保存中…' : '保存修改' }}
       </button>
     </view>
@@ -40,6 +41,7 @@ import { ref } from 'vue'
 import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
 import { getProduct, updateProduct } from '@/api/product.js'
 import ImagePicker from '@/components/ImagePicker.vue'
+import CategoryPicker from '@/components/CategoryPicker.vue'
 import { getCurrentUser } from '@/api/user.js'
 import { currentUser, getToken, updateCurrentUser } from '@/utils/session.js'
 
@@ -49,6 +51,8 @@ const draftTitle = ref('')
 const draftDescription = ref('')
 const draftPrice = ref('')
 const draftCoverId = ref('')
+const draftCategory = ref('UNCLASSIFIED')
+const categoryReady = ref(false)
 const draftVersion = ref(null)
 const conflict = ref(false)
 const uploadingCover = ref(false)
@@ -63,7 +67,7 @@ let pageClosed = false
 function isValidProduct(item) {
   return item && item.id === productId.value &&
     typeof item.title === 'string' && typeof item.description === 'string' &&
-    ['ON_SALE', 'OFF_SHELF'].includes(item.status) &&
+    ['ON_SALE', 'OFF_SHELF', 'SOLD'].includes(item.status) &&
     Number.isSafeInteger(item.version) && item.version >= 0 &&
     Number.isSafeInteger(item.priceInCents) && item.priceInCents > 0 &&
     (item.seller == null || (Number.isSafeInteger(item.seller.id) && item.seller.id > 0 &&
@@ -91,6 +95,7 @@ async function loadForEdit(discardDraft = false) {
       loadError.value = item.seller ? '只能修改自己发布的商品' : '历史商品未登记卖家，暂不支持修改'
       return
     }
+    if (item.status === 'SOLD') { loadError.value = '商品已售出，不能再编辑'; return }
     // 同一用户重新登录时保留尚未保存的草稿。
     const keepDraft = !discardDraft && product.value?.id === item.id && product.value?.seller?.id === user.id
     product.value = item
@@ -99,6 +104,7 @@ async function loadForEdit(discardDraft = false) {
       draftDescription.value = item.description
       draftPrice.value = (item.priceInCents / 100).toFixed(2)
       draftCoverId.value = item.coverImageId || ''
+      draftCategory.value = item.category?.code || 'UNCLASSIFIED'
       draftVersion.value = item.version
       conflict.value = false
     }
@@ -120,7 +126,7 @@ async function loadForEdit(discardDraft = false) {
 }
 
 async function saveProduct() {
-  if (pageClosed || loading.value || saving.value || !ready.value || saveDone.value || uploadingCover.value || conflict.value) return
+  if (pageClosed || loading.value || saving.value || !ready.value || saveDone.value || uploadingCover.value || conflict.value || !categoryReady.value) return
   errorMessage.value = ''
   const token = getToken()
   if (!token || !currentUser.value) {
@@ -142,7 +148,7 @@ async function saveProduct() {
   if (priceInCents <= 0) { errorMessage.value = '价格必须大于0'; return }
   saving.value = true
   try {
-    const result = await updateProduct(productId.value, { title, description, priceInCents, coverImageId: draftCoverId.value, version: draftVersion.value })
+    const result = await updateProduct(productId.value, { title, description, priceInCents, coverImageId: draftCoverId.value, version: draftVersion.value, categoryCode: draftCategory.value })
     if (pageClosed || getToken() !== token) return
     if (!isValidProduct(result) || result.seller?.id !== editorId) {
       throw new Error('修改结果格式异常，请返回详情重新加载确认')

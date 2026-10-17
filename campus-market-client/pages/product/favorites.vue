@@ -20,6 +20,7 @@
           <image v-if="imageUrl(item.product.coverImageId)" class="cover" :src="imageUrl(item.product.coverImageId)" mode="aspectFit" />
           <text class="item-title">{{ item.product.title }}</text>
           <text class="summary">¥{{ (item.product.priceInCents / 100).toFixed(2) }}</text>
+        <FavoriteCount :value="item.product.favoriteCount" />
           <button size="mini">查看详情</button>
         </view>
         <text v-else class="summary">商品已下架或不可用（编号：{{ item.productId }}）</text>
@@ -42,6 +43,7 @@
 import { ref, computed, watch } from 'vue'
 import { onShow, onUnload } from '@dcloudio/uni-app'
 import { getFavorites, setProductFavorite } from '@/api/favorite.js'
+import FavoriteCount from '@/components/FavoriteCount.vue'
 import { imageUrl } from '@/api/image.js'
 import { currentUser, getToken } from '@/utils/session.js'
 import { loadLegacyFavoriteIds, markFavoriteImported } from '@/utils/favorites.js'

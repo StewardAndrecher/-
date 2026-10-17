@@ -9,6 +9,6 @@ public record ProductResponse(
         ProductStatus status,
         String coverImageId,
         String coverImageUrl,
-        long version
+        long version, CategoryResponse category, long favoriteCount
 ) {
 }

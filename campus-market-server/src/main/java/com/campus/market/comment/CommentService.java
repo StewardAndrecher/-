@@ -53,7 +53,7 @@ public class CommentService {
             return receipt(productId, submission.id(), requestId, true, submission.withdrawn());
         }
         // 原提交可确认；新的提交仍要求商品在售。
-        if (status != ProductStatus.ON_SALE) throw new ProductNotFoundException("商品已下架，暂不支持新留言");
+        if (status != ProductStatus.ON_SALE) throw new ProductNotFoundException("商品不在售，暂不支持新留言");
         long id = comments.insert(productId, user.id(), content, requestId);
         return receipt(productId, id, requestId, false, false);
     }

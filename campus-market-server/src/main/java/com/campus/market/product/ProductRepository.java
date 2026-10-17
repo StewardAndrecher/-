@@ -22,38 +22,34 @@ public class ProductRepository {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public long countByKeyword(String keyword) {
-        Long total = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM products WHERE status = 'ON_SALE' AND title LIKE ? ESCAPE '!'",
-                Long.class,
-                searchPattern(keyword)
-        );
-
+    public long countByKeyword(String keyword, String category) {
+        String sql = "SELECT COUNT(*) FROM products WHERE status = 'ON_SALE' AND title LIKE ? ESCAPE '!'";
+        Long total = category.isEmpty()
+                ? jdbcTemplate.queryForObject(sql, Long.class, searchPattern(keyword))
+                : jdbcTemplate.queryForObject(sql + " AND category_code = ?", Long.class, searchPattern(keyword), category);
         return total == null ? 0 : total;
     }
 
-    public List<ProductResponse> findPage(
-            String keyword,
-            int size,
-            long offset
-    ) {
-        String sql = """
-            SELECT p.id, p.title, p.description, p.price_in_cents, p.status, p.cover_image_id, p.version,
-                   u.id AS seller_id, u.nickname AS seller_nickname
-            FROM products p
-            LEFT JOIN users u ON u.id = p.seller_id
-            WHERE p.status = 'ON_SALE' AND p.title LIKE ? ESCAPE '!'
-            ORDER BY p.id DESC
-            LIMIT ? OFFSET ?
-            """;
+    public List<ProductResponse> findPage(String keyword, String category, int size, long offset) {
+        return findPage(keyword, category, ProductSort.NEWEST, size, offset);
+    }
 
-        return jdbcTemplate.query(
-                sql,
-                this::mapProduct,
-                searchPattern(keyword),
-                size,
-                offset
-        );
+    public List<ProductResponse> findPage(String keyword, String category, ProductSort sort,
+                                          int size, long offset) {
+        String sql = """
+                SELECT p.id, p.title, p.description, p.price_in_cents, p.status,
+                       p.cover_image_id, p.version, p.category_code,
+                       u.id AS seller_id, u.nickname AS seller_nickname,
+                       (SELECT COUNT(*) FROM product_favorites pf WHERE pf.product_id = p.id) AS favorite_count
+                FROM products p LEFT JOIN users u ON u.id = p.seller_id
+                WHERE p.status = 'ON_SALE' AND p.title LIKE ? ESCAPE '!'
+                """;
+        if (!category.isEmpty()) sql += " AND p.category_code = ?";
+        // ORDER BY不能用?绑定列名，只拼接后端枚举中的固定SQL片段。
+        sql += " ORDER BY " + sort.orderBy() + " LIMIT ? OFFSET ?";
+        return category.isEmpty()
+                ? jdbcTemplate.query(sql, this::mapProduct, searchPattern(keyword), size, offset)
+                : jdbcTemplate.query(sql, this::mapProduct, searchPattern(keyword), category, size, offset);
     }
 
     private String searchPattern(String keyword) {
@@ -69,11 +65,11 @@ public class ProductRepository {
             String description,
             long priceInCents,
             long sellerId,
-            String coverImageId
+            String coverImageId, String categoryCode
     ) {
         String sql = """
-                INSERT INTO products (title, description, price_in_cents, seller_id, cover_image_id)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO products (title, description, price_in_cents, seller_id, cover_image_id, category_code)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """;
 
         KeyHolder keyHolder = new GeneratedKeyHolder();
@@ -90,6 +86,7 @@ public class ProductRepository {
             statement.setLong(3, priceInCents);
             statement.setLong(4, sellerId);
             statement.setString(5, coverImageId);
+            statement.setString(6, categoryCode);
 
             return statement;
         }, keyHolder);
@@ -116,8 +113,9 @@ public class ProductRepository {
 
     private Optional<ProductResponse> findById(long id, boolean lock) {
         String sql = """
-                SELECT p.id, p.title, p.description, p.price_in_cents, p.status, p.cover_image_id, p.version,
-                       u.id AS seller_id, u.nickname AS seller_nickname
+                SELECT p.id, p.title, p.description, p.price_in_cents, p.status, p.cover_image_id, p.version, p.category_code,
+                       u.id AS seller_id, u.nickname AS seller_nickname,
+                       (SELECT COUNT(*) FROM product_favorites pf WHERE pf.product_id = p.id) AS favorite_count
                 FROM products p
                 LEFT JOIN users u ON u.id = p.seller_id
                 WHERE p.id = ?
@@ -134,35 +132,102 @@ public class ProductRepository {
 
     public int updateOwnedProduct(long id, long sellerId, String title,
                                   String description, long priceInCents, String coverImageId, long version) {
+        String category = findById(id).orElseThrow().category().code();
+        return updateOwnedProduct(id, sellerId, title, description, priceInCents, coverImageId, version, category);
+    }
+
+    public int updateOwnedProduct(long id, long sellerId, String title,
+                                  String description, long priceInCents, String coverImageId,
+                                  long version, String categoryCode) {
         return jdbcTemplate.update("""
                 UPDATE products SET title = ?, description = ?, price_in_cents = ?,
-                                    cover_image_id = ?, version = version + 1
+                                    cover_image_id = ?, category_code = ?, version = version + 1
                 WHERE id = ? AND seller_id = ? AND version = ? AND version < 9007199254740991
-                """, title, description, priceInCents, coverImageId, id, sellerId, version);
+                  AND status <> 'SOLD'
+                """, title, description, priceInCents, coverImageId, categoryCode, id, sellerId, version);
     }
     public long countBySeller(long sellerId) {
-        Long total = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM products WHERE seller_id = ?", Long.class, sellerId);
+        return countBySeller(sellerId, null);
+    }
+
+    public long countBySeller(long sellerId, ProductStatus status) {
+        return countBySeller(sellerId, status, "");
+    }
+
+    public long countBySeller(long sellerId, ProductStatus status, String keyword) {
+        String sql = "SELECT COUNT(*) FROM products WHERE seller_id = ? AND title LIKE ? ESCAPE '!'";
+        Long total = status == null ? jdbcTemplate.queryForObject(sql, Long.class, sellerId, searchPattern(keyword))
+                : jdbcTemplate.queryForObject(sql + " AND status = ?", Long.class, sellerId, searchPattern(keyword), status.name());
         return total == null ? 0 : total;
     }
 
     public List<ProductResponse> findPageBySeller(long sellerId, int size, long offset) {
-        return jdbcTemplate.query("""
-                SELECT p.id, p.title, p.description, p.price_in_cents, p.status, p.cover_image_id, p.version,
-                       u.id AS seller_id, u.nickname AS seller_nickname
+        return findPageBySeller(sellerId, null, "", size, offset);
+    }
+
+    public List<ProductResponse> findPageBySeller(long sellerId, ProductStatus status, int size, long offset) {
+        return findPageBySeller(sellerId, status, "", size, offset);
+    }
+
+    public List<ProductResponse> findPageBySeller(long sellerId, ProductStatus status, String keyword, int size, long offset) {
+        return findPageBySeller(sellerId, status, keyword, ProductOwnerSort.NEWEST, size, offset);
+    }
+
+    public List<ProductResponse> findPageBySeller(long sellerId, ProductStatus status, String keyword, ProductOwnerSort sort, int size, long offset) {
+        String sql = """
+                SELECT p.id, p.title, p.description, p.price_in_cents, p.status, p.cover_image_id, p.version, p.category_code,
+                       u.id AS seller_id, u.nickname AS seller_nickname,
+                       (SELECT COUNT(*) FROM product_favorites pf WHERE pf.product_id = p.id) AS favorite_count
                 FROM products p
                 JOIN users u ON u.id = p.seller_id
-                WHERE p.seller_id = ?
-                ORDER BY p.id DESC
-                LIMIT ? OFFSET ?
-                """, this::mapProduct, sellerId, size, offset);
+                WHERE p.seller_id = ? AND p.title LIKE ? ESCAPE '!'
+                """;
+        if (status != null) sql += " AND p.status = ?";
+        // 排序列不能通过?绑定，只允许拼接后端枚举中的固定SQL。
+        sql += " ORDER BY " + sort.orderBy() + " LIMIT ? OFFSET ?";
+        return status == null ? jdbcTemplate.query(sql, this::mapProduct, sellerId, searchPattern(keyword), size, offset)
+                : jdbcTemplate.query(sql, this::mapProduct, sellerId, searchPattern(keyword), status.name(), size, offset);
+    }
+
+    public ProductOwnerSummaryResponse summarizeBySeller(long sellerId) {
+        // 一次聚合读取全部发布，不关联收藏/留言，避免一对多JOIN重复计数。
+        return jdbcTemplate.queryForObject("""
+                SELECT COUNT(*) AS total,
+                       COALESCE(SUM(CASE WHEN status = 'ON_SALE' THEN 1 ELSE 0 END), 0) AS on_sale,
+                       COALESCE(SUM(CASE WHEN status = 'OFF_SHELF' THEN 1 ELSE 0 END), 0) AS off_shelf,
+                       COALESCE(SUM(CASE WHEN status = 'SOLD' THEN 1 ELSE 0 END), 0) AS sold,
+                       COALESCE(SUM(CASE WHEN status = 'SOLD' THEN price_in_cents ELSE 0 END), 0) AS sold_price
+                FROM products WHERE seller_id = ?
+                """, (rs, row) -> new ProductOwnerSummaryResponse(rs.getLong("total"), rs.getLong("on_sale"),
+                rs.getLong("off_shelf"), rs.getLong("sold"), rs.getLong("sold_price")), sellerId);
     }
 
     public int updateOwnedStatus(long id, long sellerId, ProductStatus status, long version) {
         return jdbcTemplate.update("""
                 UPDATE products SET status = ?, version = version + 1
                 WHERE id = ? AND seller_id = ? AND version = ? AND version < 9007199254740991
+                  AND status <> 'SOLD'
                 """, status.name(), id, sellerId, version);
+    }
+
+    public long countOnSaleBySeller(long sellerId) {
+        Long total = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM products WHERE seller_id = ? AND status = 'ON_SALE'",
+                Long.class, sellerId);
+        return total == null ? 0 : total;
+    }
+
+    public List<ProductResponse> findPublicPageBySeller(long sellerId, ProductSort sort, int size, long offset) {
+        String sql = """
+                SELECT p.id, p.title, p.description, p.price_in_cents, p.status,
+                       p.cover_image_id, p.version, p.category_code,
+                       u.id AS seller_id, u.nickname AS seller_nickname,
+                       (SELECT COUNT(*) FROM product_favorites pf WHERE pf.product_id = p.id) AS favorite_count
+                FROM products p JOIN users u ON u.id = p.seller_id
+                WHERE p.seller_id = ? AND p.status = 'ON_SALE'
+                """;
+        sql += " ORDER BY " + sort.orderBy() + " LIMIT ? OFFSET ?";
+        return jdbcTemplate.query(sql, this::mapProduct, sellerId, size, offset);
     }
 
     public ProductResponse mapProduct(ResultSet rs, int rowNum) throws SQLException {
@@ -175,7 +240,8 @@ public class ProductRepository {
                 ProductStatus.valueOf(rs.getString("status")),
                 rs.getString("cover_image_id"),
                 rs.getString("cover_image_id") == null ? null : "/api/images/" + rs.getString("cover_image_id"),
-                rs.getLong("version")
+                rs.getLong("version"), ProductCategory.parse(rs.getString("category_code")).response(),
+                rs.getLong("favorite_count")
         );
     }
 }

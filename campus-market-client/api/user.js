@@ -15,3 +15,7 @@ export function getCurrentUser() {
 export function logoutUser() {
   return request({ path: '/api/users/logout', method: 'POST', auth: true })
 }
+
+export function updateMyNickname(data) {
+  return request({ path: '/api/users/me/nickname', method: 'PUT', auth: true, data })
+}

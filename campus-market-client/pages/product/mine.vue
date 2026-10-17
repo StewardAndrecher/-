@@ -6,22 +6,37 @@
       <button type="primary" @click="openLogin">去登录</button>
     </view>
     <view v-else>
-      <text class="summary">{{ currentUser.nickname }}，共 {{ total }} 件，包含在售和下架商品</text>
-      <button size="mini" :disabled="loading || busyId > 0" @click="fetchMine()">
+      <OwnerProductSummary :revision="summaryRevision" :busy="busyId > 0" />
+      <view class="search-bar">
+        <input v-model="draftKeyword" :disabled="loading || busyId > 0" maxlength="50" placeholder="搜索自己的商品标题" confirm-type="search" @confirm="searchMine" />
+        <button size="mini" :disabled="loading || busyId > 0" @click="searchMine">搜索</button>
+        <button size="mini" :disabled="loading || busyId > 0" @click="clearSearch">清空搜索</button>
+      </view>
+      <picker :range="STATUS_OPTIONS" range-key="label" :value="selectedStatusIndex" :disabled="loading || busyId > 0" @change="changeFilter">
+        <view class="status-filter">查看状态：{{ STATUS_OPTIONS[selectedStatusIndex].label }} ▾</view>
+      </picker>
+      <picker :range="SORT_OPTIONS" range-key="label" :value="selectedSortIndex" :disabled="loading || busyId > 0" @change="changeSort">
+        <view class="status-filter">我的发布排序：{{ SORT_OPTIONS[selectedSortIndex].label }} ▾</view>
+      </picker>
+      <text class="summary">{{ currentUser.nickname }}，当前筛选共 {{ total }} 件（关键词：{{ activeKeyword || '全部' }}）</text>
+      <text v-if="listNeedsRefresh" class="error">列表待刷新，请先刷新确认最新结果再管理商品。</text>
+      <button size="mini" :disabled="loading || busyId > 0" @click="refreshAll">
         {{ loading ? '加载中…' : '刷新我的发布' }}
       </button>
       <text v-if="message" class="error">{{ message }}</text>
       <view v-for="item in records" :key="item.id" class="card">
         <image v-if="imageUrl(item.coverImageId)" class="cover" :src="imageUrl(item.coverImageId)" mode="aspectFit" />
         <text class="item-title">{{ item.title }}</text>
-        <text class="summary">¥{{ (item.priceInCents / 100).toFixed(2) }} · {{ item.status === 'ON_SALE' ? '在售' : '已下架' }}</text>
+        <text class="summary">¥{{ (item.priceInCents / 100).toFixed(2) }} · {{ item.status === 'SOLD' ? '已售出' : item.status === 'ON_SALE' ? '在售' : '已下架' }}</text>
         <button size="mini" :disabled="loading || busyId > 0" @click="openPage('detail', item.id)">查看详情</button>
-        <button size="mini" :disabled="loading || busyId > 0" @click="openPage('edit', item.id)">编辑</button>
-        <button type="primary" :disabled="loading || busyId > 0" @click="changeStatus(item)">
+        <button v-if="item.status !== 'SOLD'" size="mini" :disabled="loading || busyId > 0" @click="openPage('edit', item.id)">编辑</button>
+        <button v-if="item.status !== 'SOLD'" type="primary" :disabled="loading || busyId > 0 || listNeedsRefresh" @click="changeStatus(item)">
           {{ busyId === item.id ? '处理中…' : (item.status === 'ON_SALE' ? '下架' : '上架') }}
         </button>
+        <button v-if="item.status !== 'SOLD'" :disabled="loading || busyId > 0 || listNeedsRefresh" @click="markSold(item)">标记已售出</button>
+        <text v-else class="summary">已售出商品保留记录，不能再编辑或重新上架。</text>
       </view>
-      <text v-if="!loading && !message && records.length === 0" class="summary">还没有发布商品</text>
+      <text v-if="!loading && !message && records.length === 0" class="summary">{{ activeStatus || activeKeyword ? '当前条件下没有商品' : '还没有发布商品' }}</text>
       <view class="pagination">
         <button size="mini" :disabled="loading || busyId > 0 || page <= 1" @click="fetchMine(page - 1)">上一页</button>
         <text>第 {{ page }} / {{ totalPages }} 页</text>
@@ -38,8 +53,28 @@ import { onShow, onUnload } from '@dcloudio/uni-app'
 import { getMyProducts, updateProductStatus } from '@/api/product.js'
 import { currentUser, getToken } from '@/utils/session.js'
 import { imageUrl } from '@/api/image.js'
+import OwnerProductSummary from '@/components/OwnerProductSummary.vue'
 
+const summaryRevision = ref(0)
 const SIZE = 5
+const STATUS_OPTIONS = Object.freeze([
+  { value: '', label: '全部状态' },
+  { value: 'ON_SALE', label: '在售' },
+  { value: 'OFF_SHELF', label: '已下架' },
+  { value: 'SOLD', label: '已售出' }
+])
+const SORT_OPTIONS = Object.freeze([
+  { value: 'NEWEST', label: '最新发布' },
+  { value: 'PRICE_ASC', label: '价格从低到高' },
+  { value: 'PRICE_DESC', label: '价格从高到低' }
+])
+const activeSort = ref('NEWEST')
+const selectedSortIndex = computed(() => SORT_OPTIONS.findIndex(option => option.value === activeSort.value))
+const activeStatus = ref('')
+const draftKeyword = ref('')
+const activeKeyword = ref('')
+const selectedStatusIndex = computed(() => STATUS_OPTIONS.findIndex(option => option.value === activeStatus.value))
+const listNeedsRefresh = ref(false)
 const records = ref([])
 const total = ref(0)
 const page = ref(1)
@@ -54,32 +89,62 @@ function isValidItem(item, userId) {
     typeof item.title === 'string' && typeof item.description === 'string' &&
     Number.isSafeInteger(item.priceInCents) && item.priceInCents > 0 &&
     item.seller?.id === userId && typeof item.seller.nickname === 'string' &&
-    ['ON_SALE', 'OFF_SHELF'].includes(item.status) &&
+    ['ON_SALE', 'OFF_SHELF', 'SOLD'].includes(item.status) &&
     Number.isSafeInteger(item.version) && item.version >= 0
 }
 
 watch(currentUser, (user, previous) => {
   if (user?.id !== previous?.id) {
     records.value = []; total.value = 0; page.value = 1
+    activeSort.value = 'NEWEST'; activeStatus.value = ''; draftKeyword.value = ''; activeKeyword.value = ''; listNeedsRefresh.value = false
   }
 })
 
-async function fetchMine(targetPage = page.value) {
-  if (pageClosed || loading.value || busyId.value > 0 || targetPage < 1) return
+function changeFilter(event) {
+  const raw = event?.detail?.value
+  if (!['string', 'number'].includes(typeof raw) || !/^[0-3]$/.test(String(raw))) return
+  fetchMine(1, STATUS_OPTIONS[Number(raw)].value)
+}
+
+function changeSort(event) {
+  const raw = event?.detail?.value
+  if (!['string', 'number'].includes(typeof raw) || !/^[0-2]$/.test(String(raw))) return
+  fetchMine(1, activeStatus.value, activeKeyword.value, SORT_OPTIONS[Number(raw)].value)
+}
+
+async function searchMine() {
+  const keyword = draftKeyword.value.trim()
+  if (keyword.length > 50) { message.value = '搜索关键词不能超过50个字符'; return }
+  if (await fetchMine(1, activeStatus.value, keyword)) draftKeyword.value = activeKeyword.value
+}
+
+async function clearSearch() {
+  if (await fetchMine(1, activeStatus.value, '')) draftKeyword.value = ''
+}
+
+async function fetchMine(targetPage = page.value, status = activeStatus.value, keyword = activeKeyword.value, sort = activeSort.value) {
+  if (pageClosed || loading.value || busyId.value > 0 || !Number.isSafeInteger(targetPage) || targetPage < 1 ||
+      !STATUS_OPTIONS.some(option => option.value === status) || typeof keyword !== 'string' || keyword.length > 50 ||
+      !SORT_OPTIONS.some(option => option.value === sort)) return false
   message.value = ''
-  const token = getToken()
-  const userId = currentUser.value?.id
-  if (!token || !userId) { records.value = []; total.value = 0; return }
+  const token = getToken(), userId = currentUser.value?.id
+  if (!token || !userId) { records.value = []; total.value = 0; return false }
   loading.value = true
+  let smallerPage = 0, success = false
   try {
-    const data = await getMyProducts({ page: targetPage, size: SIZE })
-    if (pageClosed || token !== getToken()) return
-    if (!data || !Array.isArray(data.records) || !data.records.every(item => isValidItem(item, userId)) ||
+    const data = await getMyProducts({ page: targetPage, size: SIZE, status, keyword, sort })
+    if (pageClosed || token !== getToken() || userId !== currentUser.value?.id) return false
+    if (!data || !Array.isArray(data.records) || !data.records.every(item => isValidItem(item, userId) && (!status || item.status === status)) ||
         !Number.isSafeInteger(data.total) || data.total < data.records.length ||
         data.page !== targetPage || data.size !== SIZE || data.records.length > SIZE) {
       throw new Error('我的发布响应格式不正确')
     }
-    records.value = data.records; total.value = data.total; page.value = data.page
+    const lastPage = Math.max(1, Math.ceil(data.total / SIZE))
+    if (targetPage > lastPage) smallerPage = lastPage
+    else {
+      records.value = data.records; total.value = data.total; page.value = data.page
+      activeSort.value = sort; activeStatus.value = status; activeKeyword.value = keyword; listNeedsRefresh.value = false; success = true
+    }
   } catch (error) {
     if (!pageClosed && (token === getToken() || !getToken())) {
       if (error.statusCode === 401) { records.value = []; total.value = 0 }
@@ -89,34 +154,48 @@ async function fetchMine(targetPage = page.value) {
     loading.value = false
     if (!pageClosed && token !== getToken() && getToken()) await fetchMine(1)
   }
+  if (smallerPage && !pageClosed && token === getToken()) return fetchMine(smallerPage, status, keyword, sort)
+  return success
 }
 
-async function changeStatus(item) {
-  if (pageClosed || loading.value || busyId.value > 0) return
+async function changeStatus(item, requestedStatus = '') {
+  if (pageClosed || loading.value || busyId.value > 0 || listNeedsRefresh.value) return
   const token = getToken()
   const userId = currentUser.value?.id
   if (!token || !userId) { openLogin(); return }
   if (!isValidItem(item, userId)) { message.value = '商品信息不正确，请刷新'; return }
-  const target = item.status === 'ON_SALE' ? 'OFF_SHELF' : 'ON_SALE'
+  if (item.status === 'SOLD') { message.value = '商品已售出，请查看保留记录'; return }
+  const target = requestedStatus === 'SOLD' ? 'SOLD' : item.status === 'ON_SALE' ? 'OFF_SHELF' : 'ON_SALE'
   busyId.value = item.id; message.value = ''
-  let refreshAfterConflict = false
+  let refreshAfterConflict = false, refreshAfterChange = false
   try {
     const result = await updateProductStatus(item.id, target, item.version)
     if (pageClosed || token !== getToken()) return
-    if (!isValidItem(result, userId) || result.id !== item.id || result.status !== target) {
+    if (!isValidItem(result, userId) || result.id !== item.id || result.status !== target ||
+        (target === 'SOLD' && result.version !== item.version + 1)) {
       throw new Error('状态响应异常，请刷新确认')
     }
-    records.value = records.value.map(row => row.id === item.id ? result : row)
-    uni.showToast({ title: target === 'ON_SALE' ? '已上架' : '已下架', icon: 'success' })
+    if (activeStatus.value && result.status !== activeStatus.value) {
+      records.value = records.value.filter(row => row.id !== item.id)
+      total.value = Math.max(0, total.value - 1)
+      page.value = Math.min(page.value, Math.max(1, Math.ceil(total.value / SIZE)))
+      listNeedsRefresh.value = true; refreshAfterChange = true
+    } else records.value = records.value.map(row => row.id === item.id ? result : row)
+    uni.showToast({ title: target === 'SOLD' ? '已标记售出' : target === 'ON_SALE' ? '已上架' : '已下架', icon: 'success' })
   } catch (error) {
     if (!pageClosed && (token === getToken() || !getToken())) {
       if (error.statusCode === 409 && error.code === 'PRODUCT_CONFLICT') refreshAfterConflict = true
+      if (!error.statusCode || error.statusCode >= 500 || refreshAfterConflict) listNeedsRefresh.value = true
       if (error.statusCode === 401) { records.value = []; total.value = 0 }
       message.value = error.statusCode === 0 ? '未收到操作结果，请刷新确认状态后再重试'
         : error.statusCode === 401 ? '登录已失效，请重新登录' : error.message || '操作失败'
     }
   } finally {
     busyId.value = 0
+    if (refreshAfterChange && !pageClosed && token === getToken()) {
+      const refreshed = await fetchMine()
+      if (!refreshed && !pageClosed && token === getToken()) message.value = '状态已更新，但列表刷新失败：' + (message.value || '请手动刷新')
+    }
     if (refreshAfterConflict && !pageClosed && token === getToken()) {
       await fetchMine()
       if (!pageClosed && token === getToken()) {
@@ -126,6 +205,28 @@ async function changeStatus(item) {
     }
     if (!pageClosed && token !== getToken() && getToken()) await fetchMine(1)
   }
+}
+
+async function markSold(item) {
+  if (pageClosed || loading.value || busyId.value > 0 || listNeedsRefresh.value || item?.status === 'SOLD') return
+  const token = getToken(), userId = currentUser.value?.id
+  if (!token || !userId) { openLogin(); return }
+  if (!isValidItem(item, userId)) { message.value = '商品信息不正确，请刷新'; return }
+  const id = item.id, version = item.version
+  busyId.value = id
+  const confirmed = await new Promise(resolve => {
+    try {
+      uni.showModal({ title: '确认商品已售出？', content: '确认后将保留记录，并停止编辑和重新上架。请仅在商品确实售出后确认。',
+        confirmText: '确认售出', success: result => resolve(result.confirm === true), fail: () => resolve(false) })
+    } catch { resolve(false) }
+  })
+  busyId.value = 0
+  if (!confirmed || pageClosed || token !== getToken() || currentUser.value?.id !== userId) return
+  const latest = records.value.find(row => row.id === id)
+  if (!latest || latest.version !== version || latest.status === 'SOLD') {
+    message.value = '商品信息已变化，请刷新后确认'; return
+  }
+  await changeStatus(latest, 'SOLD')
 }
 
 function openLogin() {
@@ -140,11 +241,18 @@ function goHome() {
   if (getCurrentPages().length > 1) uni.navigateBack()
   else uni.reLaunch({ url: '/pages/index/index' })
 }
-onShow(() => fetchMine())
+function refreshAll() {
+  summaryRevision.value++
+  return fetchMine()
+}
+onShow(refreshAll)
 onUnload(() => { pageClosed = true })
 </script>
 
 <style scoped>
+.search-bar { margin-top: 20rpx; }
+.search-bar input { background: white; padding: 20rpx; border-radius: 12rpx; }
+.status-filter { padding: 20rpx; margin-top: 20rpx; border-radius: 12rpx; background: white; }
 .cover { width: 100%; height: 240rpx; }
 .page { padding: 32rpx; min-height: 100vh; box-sizing: border-box; background: #f5f7fa; }
 .title, .item-title { display: block; font-size: 36rpx; font-weight: bold; }

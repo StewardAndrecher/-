@@ -1,6 +1,8 @@
 <template>
   <view class="page">
     <text class="page-title">校园集市</text>
+    <NetworkStatusBanner :busy="loading || publishing || uploadingCover" allow-refresh @retry="fetchProducts()" />
+    <button v-if="DIAGNOSTICS_ENABLED" size="mini" :disabled="publishing || uploadingCover" @click="openConnection">开发连接诊断</button>
     <view class="account-panel">
       <text>{{ currentUser ? '你好，' + currentUser.nickname : '未登录' }}</text>
       <button v-if="!currentUser" size="mini" :disabled="checkingAccount || exiting || publishing || uploadingCover"
@@ -11,7 +13,11 @@
       <button v-if="currentUser" size="mini" :disabled="checkingAccount || exiting || publishing || uploadingCover"
         @click="openMyProducts">我的发布</button>
       <button v-if="currentUser" size="mini" @click="openMyFavorites">我的收藏</button>
+      <button size="mini" @click="openHistory">最近浏览</button>
+      <button v-if="currentUser" size="mini" :disabled="checkingAccount || exiting || publishing || uploadingCover"
+        @click="openProfile">账号资料</button>
     </view>
+    <PurchaseIntentList v-if="currentUser" :active="intentionPageActive" :disabled="checkingAccount || exiting || publishing || uploadingCover" />
 	<button
 	  size="mini"
 	  :disabled="loading || publishing || uploadingCover"
@@ -51,7 +57,7 @@
     class="form-field"
     placeholder="2～50个字符，例如：闲置台灯"
     :maxlength="50"
-	:disabled="publishing || uploadingCover"
+	:disabled="publishing || uploadingCover || !!pendingPublication || publicationStorageBlocked"
   />
 
   <text class="field-label">商品描述</text>
@@ -60,7 +66,7 @@
     class="form-field description-input"
     placeholder="成色、使用情况、交接地点，可不填"
     :maxlength="500"
-	:disabled="publishing || uploadingCover"
+	:disabled="publishing || uploadingCover || !!pendingPublication || publicationStorageBlocked"
   />
 
   <text class="field-label">价格（元）</text>
@@ -70,21 +76,30 @@
     type="digit"
     placeholder="例如：35.50"
     :maxlength="9"
-	:disabled="publishing || uploadingCover"
+	:disabled="publishing || uploadingCover || !!pendingPublication || publicationStorageBlocked"
   />
 
-  <ImagePicker v-model="draftCoverId" :disabled="publishing" @busy="uploadingCover = $event" />
+  <CategoryPicker v-model="draftCategory" :disabled="publishing || uploadingCover || !!pendingPublication || publicationStorageBlocked" @ready="publishCategoryReady = $event" />
+  <ImagePicker v-model="draftCoverId" :disabled="publishing || !!pendingPublication || publicationStorageBlocked" @busy="uploadingCover = $event" />
 
+  <ProductDraftBox v-if="currentUser"
+    :draft="{ title: draftTitle, description: draftDescription, priceText: draftPrice, coverImageId: draftCoverId, categoryCode: draftCategory }"
+    :active-draft="activeSavedDraft"
+    :disabled="publishing || uploadingCover || checkingAccount || exiting || !!pendingPublication || publicationStorageBlocked"
+    @saved="rememberSavedDraft" @restore="restoreSavedDraft" @removed="detachSavedDraft" @restore-cloud="restoreCloudDraft" />
+
+  <text v-if="pendingPublication" class="summary">这次发布待确认，内容已锁定。超时后点击“确认这次发布”，会继续使用原提交标识。</text>
+  <text v-if="publicationMessage" class="summary">{{ publicationMessage }}</text>
   <text v-if="publishError" class="form-error">
     {{ publishError }}
   </text>
 
   <button
     type="primary"
-    :disabled="publishing || loading || checkingAccount || exiting || uploadingCover"
+    :disabled="publishing || loading || checkingAccount || exiting || uploadingCover || (!pendingPublication && !publishCategoryReady) || publicationStorageBlocked"
     @click="publishProduct"
   >
-    {{ publishing ? '发布中…' : (currentUser ? '发布商品' : '登录后发布') }}
+    {{ publishing ? '发布中…' : (pendingPublication ? '确认这次发布' : (currentUser ? '发布商品' : '登录后发布')) }}
   </button>
 </view>
 
@@ -98,6 +113,10 @@
       @confirm="searchProducts"
     />
 
+    <CategoryPicker :model-value="activeCategory" include-all label="筛选分类"
+      :disabled="loading || publishing || uploadingCover" @update:modelValue="changeCategory" />
+    <SortPicker :model-value="activeSort" :disabled="loading || publishing || uploadingCover"
+      @update:modelValue="changeSort" />
     <button size="mini" :disabled="loading || publishing || uploadingCover" @click="searchProducts">搜索</button>
 
     <button size="mini" :disabled="!currentUser || favoriteLoading || favoriteBusyId > 0" @click="toggleFavoritesFilter">
@@ -119,6 +138,9 @@
       :is-favorite="favoriteIds.includes(item.id)"
       :favorite-disabled="loading || favoriteLoading || favoriteBusyId > 0 || !!favoriteMessage"
       :favorite-pending="favoriteBusyId === item.id"
+      :stats-stale="dataSource !== '后端接口'"
+      :show-seller-button="true"
+      @open-seller="openSeller"
       @toggle-favorite="toggleFavorite($event)"
 	  @open-detail="openProductDetail($event)"
     />
@@ -140,12 +162,22 @@
 </template>
 
 <script setup>
+import { submitPublication } from '@/api/publication.js'
+import { newPublicationRequestId, loadPendingPublication, savePendingPublication, clearPendingPublication } from '@/utils/product-publications.js'
 import { ref, computed, watch } from 'vue'
-import { onLoad, onShow } from '@dcloudio/uni-app'
+import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import ProductCard from '@/components/ProductCard.vue'
+import NetworkStatusBanner from '@/components/NetworkStatusBanner.vue'
 import ImagePicker from '@/components/ImagePicker.vue'
-import { getProducts, createProduct } from '@/api/product.js'
+import PurchaseIntentList from '@/components/PurchaseIntentList.vue'
+import CategoryPicker from '@/components/CategoryPicker.vue'
+import SortPicker from '@/components/SortPicker.vue'
+import ProductDraftBox from '@/components/ProductDraftBox.vue'
+import { DIAGNOSTICS_ENABLED } from '@/config/server.js'
+import { getProducts } from '@/api/product.js'
 import { getCurrentUser, logoutUser } from '@/api/user.js'
+import { sellerStorePath } from '@/utils/seller-store.js'
+import { isValidFavoriteCount } from '@/utils/product-popularity.js'
 import { currentUser, getToken, updateCurrentUser, clearSession } from '@/utils/session.js'
 import { favoriteIds, favoriteLoading, favoriteBusyId, favoriteMessage, loadAccountFavorites, changeAccountFavorite } from '@/utils/account-favorites.js'
 
@@ -153,11 +185,31 @@ const checkingAccount = ref(false)
 const exiting = ref(false)
 const accountMessage = ref('')
 
+function openConnection() {
+  uni.navigateTo({ url: '/pages/dev/connection',
+    fail: () => uni.showToast({ title: '打开诊断页失败', icon: 'none' }) })
+}
+
 function openLogin() {
   uni.navigateTo({
     url: '/pages/user/login',
     fail: () => uni.showToast({ title: '打开登录页失败', icon: 'none' })
   })
+}
+
+function openSeller(id) {
+  uni.navigateTo({ url: sellerStorePath(id),
+    fail: () => uni.showToast({ title: '打开卖家主页失败', icon: 'none' }) })
+}
+
+function openHistory() {
+  uni.navigateTo({ url: '/pages/product/history',
+    fail: () => uni.showToast({ title: '打开浏览记录失败', icon: 'none' }) })
+}
+
+function openProfile() {
+  uni.navigateTo({ url: '/pages/user/profile',
+    fail: () => uni.showToast({ title: '打开账号资料失败', icon: 'none' }) })
 }
 
 function openMyProducts() {
@@ -202,8 +254,10 @@ async function exitAccount() {
   }
 }
 
+const intentionPageActive = ref(false)
 let hasShown = false
 onShow(() => {
+  intentionPageActive.value = true
   refreshAccount()
   if (hasShown) fetchProducts()
   hasShown = true
@@ -220,13 +274,17 @@ function openRegister() {
 }
 
 const PAGE_SIZE = 5
-const PAGE_CACHE_KEY = 'campus-market-page-cache-v4'
+const PAGE_CACHE_KEY = 'campus-market-page-cache-v7'
 
 const products = ref([])
 const page = ref(1)
 const total = ref(0)
 const keyword = ref('')
 const activeKeyword = ref('')
+const activeCategory = ref('')
+const activeSort = ref('NEWEST')
+const draftCategory = ref('OTHER')
+const publishCategoryReady = ref(false)
 const onlyFavorites = ref(false)
 const loading = ref(false)
 const publishing = ref(false)
@@ -234,14 +292,64 @@ const requestError = ref('')
 const publishError = ref('')
 const storageMessage = ref('')
 const dataSource = ref('待加载')
+const activeSavedDraft = ref(null)
 const draftTitle = ref('')
 const draftDescription = ref('')
 const draftPrice = ref('')
 const draftCoverId = ref('')
 const uploadingCover = ref(false)
+const pendingPublication = ref(null)
+const publicationMessage = ref('')
+const publicationStorageBlocked = ref(false)
+let homeClosed = false
+onHide(() => { intentionPageActive.value = false })
+onUnload(() => { intentionPageActive.value = false; homeClosed = true })
+
+function rememberSavedDraft(item) {
+  if (item.userId === currentUser.value?.id) activeSavedDraft.value = { id: item.id, revision: item.revision }
+}
+function restoreSavedDraft(item) {
+  if (homeClosed || publishing.value || uploadingCover.value || checkingAccount.value || exiting.value ||
+      pendingPublication.value || publicationStorageBlocked.value || !getToken() || item.userId !== currentUser.value?.id) return
+  draftTitle.value = item.content.title; draftDescription.value = item.content.description
+  draftPrice.value = item.content.priceText; draftCoverId.value = item.content.coverImageId; draftCategory.value = item.content.categoryCode
+  rememberSavedDraft(item); publishError.value = ''; return true
+}
+function restoreCloudDraft(item) {
+  if (restoreSavedDraft({ userId: item.userId, id: item.draftId, revision: item.sourceRevision, content: item.content })) activeSavedDraft.value = null
+}
+function detachSavedDraft(id) {
+  if (activeSavedDraft.value?.id === id) activeSavedDraft.value = null
+}
+function clearPublicationDraft() {
+  activeSavedDraft.value = null
+  draftTitle.value = ''; draftDescription.value = ''; draftPrice.value = ''
+  draftCoverId.value = ''; draftCategory.value = 'OTHER'
+}
+function restorePublication(userId) {
+  pendingPublication.value = null
+  publicationStorageBlocked.value = false
+  try {
+    const pending = loadPendingPublication(userId)
+    pendingPublication.value = pending
+    if (pending) {
+      draftTitle.value = pending.product.title; draftDescription.value = pending.product.description
+      draftPrice.value = (pending.product.priceInCents / 100).toFixed(2)
+      draftCoverId.value = pending.product.coverImageId; draftCategory.value = pending.product.categoryCode
+    }
+  } catch (error) {
+    publicationStorageBlocked.value = true
+    publishError.value = error.message
+  }
+}
 
 watch(currentUser, (user, previous) => {
-  if (user?.id !== previous?.id) onlyFavorites.value = false
+  if (user?.id !== previous?.id) {
+    onlyFavorites.value = false
+    pendingPublication.value = null; publicationMessage.value = ''; publicationStorageBlocked.value = false
+    if (previous?.id) clearPublicationDraft()
+    if (user?.id) restorePublication(user.id)
+  }
   if (user && ['请先登录后发布商品', '登录已失效，请重新登录后发布'].includes(publishError.value)) {
     publishError.value = ''
   }
@@ -258,6 +366,7 @@ function isValidProduct(item) {
     typeof item.title === 'string' &&
     typeof item.description === 'string' &&
     item.status === 'ON_SALE' &&
+    isValidFavoriteCount(item.favoriteCount) &&
     Number.isSafeInteger(item.version) && item.version >= 0 &&
     (item.seller == null || (
       Number.isSafeInteger(item.seller.id) && item.seller.id > 0 &&
@@ -280,7 +389,8 @@ function loadLocalData() {
     const savedText = uni.getStorageSync(PAGE_CACHE_KEY)
     if (!savedText) return
     const saved = JSON.parse(savedText)
-    if (!isValidPage(saved) || typeof saved.keyword !== 'string') {
+    if (!isValidPage(saved) || typeof saved.keyword !== 'string' || typeof saved.category !== 'string' ||
+        !['NEWEST', 'PRICE_ASC', 'PRICE_DESC', 'MOST_FAVORITED'].includes(saved.sort)) {
       throw new Error('分页缓存格式不正确')
     }
     products.value = saved.records
@@ -288,6 +398,8 @@ function loadLocalData() {
     total.value = saved.total
     activeKeyword.value = saved.keyword
     keyword.value = saved.keyword
+    activeCategory.value = saved.category
+    activeSort.value = saved.sort
     dataSource.value = '本地缓存'
   } catch (error) {
     storageMessage.value = '读取商品缓存失败，将尝试请求后端'
@@ -295,11 +407,13 @@ function loadLocalData() {
   }
 }
 
-function savePageCache(data, searchText) {
+function savePageCache(data, searchText, categoryCode, sortCode) {
   try {
     uni.setStorageSync(PAGE_CACHE_KEY, JSON.stringify({
       ...data,
-      keyword: searchText
+      keyword: searchText,
+      category: categoryCode,
+      sort: sortCode
     }))
   } catch (error) {
     storageMessage.value = '商品已加载，但本地缓存保存失败'
@@ -307,7 +421,7 @@ function savePageCache(data, searchText) {
   }
 }
 
-async function fetchProducts(targetPage = page.value, searchText = activeKeyword.value) {
+async function fetchProducts(targetPage = page.value, searchText = activeKeyword.value, categoryCode = activeCategory.value, sortCode = activeSort.value) {
   if (loading.value || publishing.value || targetPage < 1) return
   loading.value = true
   requestError.value = ''
@@ -316,7 +430,9 @@ async function fetchProducts(targetPage = page.value, searchText = activeKeyword
     const data = await getProducts({
       page: targetPage,
       size: PAGE_SIZE,
-      keyword: searchText
+      keyword: searchText,
+      category: categoryCode,
+      sort: sortCode
     })
     if (!isValidPage(data) || data.page !== targetPage) {
       throw new Error('接口返回的分页数据格式不正确')
@@ -325,8 +441,10 @@ async function fetchProducts(targetPage = page.value, searchText = activeKeyword
     total.value = data.total
     page.value = data.page
     activeKeyword.value = searchText
+    activeCategory.value = categoryCode
+    activeSort.value = sortCode
     dataSource.value = '后端接口'
-    savePageCache(data, searchText)
+    savePageCache(data, searchText, categoryCode, sortCode)
   } catch (error) {
     requestError.value = error.message
     console.error('请求商品失败：', error)
@@ -334,6 +452,14 @@ async function fetchProducts(targetPage = page.value, searchText = activeKeyword
     loading.value = false
     await loadAccountFavorites(products.value.map(item => item.id))
   }
+}
+
+function changeCategory(code) {
+  fetchProducts(1, keyword.value.trim(), code)
+}
+
+function changeSort(code) {
+  fetchProducts(1, keyword.value.trim(), activeCategory.value, code)
 }
 
 function searchProducts() {
@@ -346,7 +472,12 @@ function toggleFavoritesFilter() {
 
 async function toggleFavorite(productId) {
   if (!getToken() || !currentUser.value) { openLogin(); return }
-  await changeAccountFavorite(productId, !favoriteIds.value.includes(productId))
+  const token = getToken()
+  const changed = await changeAccountFavorite(productId, !favoriteIds.value.includes(productId))
+  if (!changed || token !== getToken()) return
+  // 收藏已成功，但人数需要服务器重新统计；失败时保留上次结果并标记。
+  dataSource.value = '待刷新'
+  await fetchProducts()
 }
 
 function openMyFavorites() {
@@ -355,64 +486,62 @@ function openMyFavorites() {
 }
 
 async function publishProduct() {
-  if (loading.value || publishing.value || checkingAccount.value || exiting.value || uploadingCover.value) return
+  if (homeClosed || loading.value || publishing.value || checkingAccount.value || exiting.value || uploadingCover.value ||
+      publicationStorageBlocked.value || (!pendingPublication.value && !publishCategoryReady.value)) return
   publishError.value = ''
   if (!getToken() || !currentUser.value) {
-    publishError.value = '请先登录后发布商品'
-    openLogin()
-    return
+    publishError.value = '请先登录后发布商品'; openLogin(); return
   }
   const publisherId = currentUser.value.id
-  const title = draftTitle.value.trim()
-  const description = draftDescription.value.trim()
-  const priceText = draftPrice.value.trim()
-
-  if (title.length < 2 || title.length > 50) {
-    publishError.value = '商品标题需要2～50个字符'
-    return
+  const publisherToken = getToken()
+  const stillCurrent = () => !homeClosed && getToken() === publisherToken && currentUser.value?.id === publisherId
+  if (!pendingPublication.value) {
+    publicationMessage.value = ''
+    const title = draftTitle.value.trim(), description = draftDescription.value.trim(), priceText = draftPrice.value.trim()
+    if (title.length < 2 || title.length > 50) { publishError.value = '商品标题需要2～50个字符'; return }
+    if (description.length > 500) { publishError.value = '商品描述不能超过500个字符'; return }
+    if (!/^\d{1,6}(\.\d{1,2})?$/.test(priceText)) { publishError.value = '价格需为数字，整数最多6位，小数最多2位'; return }
+    const priceInCents = Math.round(Number(priceText) * 100)
+    if (priceInCents <= 0) { publishError.value = '价格必须大于0'; return }
+    try {
+      pendingPublication.value = savePendingPublication(publisherId, {
+        requestId: newPublicationRequestId(), createdAt: Date.now(),
+        product: { title, description, priceInCents, coverImageId: draftCoverId.value, categoryCode: draftCategory.value }
+      })
+    } catch (error) {
+      publishError.value = error.message
+      // 不覆盖另一个窗口留下的待确认提交。
+      restorePublication(publisherId)
+      return
+    }
   }
-  if (description.length > 500) {
-    publishError.value = '商品描述不能超过500个字符'
-    return
-  }
-  if (!/^\d{1,6}(\.\d{1,2})?$/.test(priceText)) {
-    publishError.value = '价格需为数字，整数最多6位，小数最多2位'
-    return
-  }
-  const priceInCents = Math.round(Number(priceText) * 100)
-  if (priceInCents <= 0) {
-    publishError.value = '价格必须大于0'
-    return
-  }
-
+  const pending = pendingPublication.value
   publishing.value = true
   let published = false
   try {
-    const data = await createProduct({ title, description, priceInCents, coverImageId: draftCoverId.value })
-    if (!isValidProduct(data) || data.seller?.id !== publisherId) {
-      throw new Error('商品可能已发布，但响应格式异常，请刷新列表确认')
-    }
+    const receipt = await submitPublication(pending)
+    if (!stillCurrent()) return
+    publicationMessage.value = '已发布，商品编号：' + receipt.productId + (activeSavedDraft.value ? '；已保存的本机草稿仍保留，可手动管理' : '')
+    clearPendingPublication(publisherId, pending.requestId)
+    pendingPublication.value = null
+    clearPublicationDraft()
+    keyword.value = ''; onlyFavorites.value = false
     published = true
-    draftTitle.value = ''
-    draftDescription.value = ''
-    draftPrice.value = ''
-    draftCoverId.value = ''
-    keyword.value = ''
-    onlyFavorites.value = false
-    uni.showToast({ title: '发布成功', icon: 'success' })
+    uni.showToast({ title: receipt.replayed ? '已确认原商品' : '发布成功', icon: 'success' })
   } catch (error) {
-    publishError.value = error.statusCode === 401
-      ? '登录已失效，请重新登录后发布'
-      : error.statusCode === 0
-        ? '未收到发布结果，请刷新列表确认后再重试'
-        : error.message
-    console.error('发布商品失败：', error)
+    if (!stillCurrent()) return
+    // 只有明确的参数校验失败才解除锁定；500、超时、409均保留原提交。
+    if (error.statusCode === 400 && ['INVALID_PRODUCT', 'INVALID_PUBLICATION', 'INVALID_IMAGE'].includes(error.code)) {
+      try { clearPendingPublication(publisherId, pending.requestId); pendingPublication.value = null }
+      catch (storageError) { publishError.value = storageError.message; return }
+    }
+    publishError.value = error.statusCode === 401 ? '登录已失效，请重新登录后确认原发布'
+      : (error.statusCode === 0 || error.statusCode >= 500) ? '未收到发布结果，原内容已保存，请点击确认这次发布'
+      : error.message
   } finally {
     publishing.value = false
   }
-
-  // 发布已确认成功；列表刷新失败由 requestError 单独提示
-  if (published) await fetchProducts(1, '')
+  if (published && stillCurrent()) await fetchProducts(1, '', '', 'NEWEST')
 }
 
 function openProductDetail(productId) {
@@ -426,6 +555,7 @@ function openProductDetail(productId) {
 }
 
 onLoad(() => {
+  if (currentUser.value?.id) restorePublication(currentUser.value.id)
   loadLocalData()
   fetchProducts()
 })

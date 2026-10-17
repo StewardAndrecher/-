@@ -1,101 +1,120 @@
-# 校园二手交易平台
+# Campus Market · 校园二手交易平台
 
-基于 Java / Spring Boot / MySQL 与 Vue 3 / uni-app 的全栈学习项目，当前代码对应第28课。前后端分别位于 `campus-market-server` 和 `campus-market-client`。
+![Campus Market 项目概览](docs/assets/project-overview.svg)
 
-## 已实现
+**Java / Spring Boot + Vue 3 / uni-app + MySQL + Electron。** 围绕校园闲置流转，实现商品发布、个人收藏、购买意向和双方留言；一套前端复用到 Web、微信小程序、App资源与Mac桌面端。
 
-- 用户注册、密码哈希、登录、会话过期与退出。
-- 商品分页、关键词搜索、发布、卖家编辑和上下架。
-- 商品封面上传、图片校验与访问。
-- 商品版本控制，阻止过期页面覆盖新修改。
-- 登录用户收藏、分页收藏列表与账号隔离。
-- 商品公开留言、卖家标记、作者撤回。
-- 留言提交幂等：同一次提交重试返回原结果；待确认草稿按账号和商品保存；已撤回留言不会因重试重新出现。
+[技术栈](#tech-stack) · [实现亮点](#engineering) · [实际截图](#screenshots) · [本地启动](docs/GETTING_STARTED.md) · [架构与技术说明](docs/TECH_STACK.md) · [测试与验收](docs/VERIFICATION.md)
 
-目前完成 Web 开发与验收。小程序、手机App和桌面应用是后续课程目标，尚未完成各端运行验收。
+本仓库包含截至第66课的完整实现、建库脚本、测试和验收截图。GitHub链接用于源码与项目展示；业务服务目前在本机运行。
 
-## 环境
+<a id="tech-stack"></a>
 
-- JDK 17。
-- Maven，或者后端目录中的 Maven Wrapper。
-- MySQL，使用 InnoDB 并支持 CHECK 约束。
-- HBuilderX，使用 Vue 3 的 uni-app 项目支持。本项目由 HBuilderX 管理前端依赖，没有独立 npm 启动脚本。
-- 后端使用 Spring Boot 4.1.1，具体依赖见 `campus-market-server/pom.xml`。
+## 技术栈
 
-## 初始化数据库
+| 层次 | 实际使用 | 在项目中的职责 |
+|---|---|---|
+| 前端 | Vue 3、Composition API、JavaScript、uni-app | 共享页面与组件，Web/微信/App条件编译，统一请求与会话管理 |
+| 后端 | Java 17、Spring Boot 4.1.1、Spring MVC | REST API、Controller/Service/Repository分层、统一异常响应 |
+| 数据访问 | Spring JDBC / JdbcTemplate、MySQL / InnoDB | 参数化SQL、事务、行锁、版本条件更新、唯一约束、分组聚合 |
+| 身份认证 | BCrypt、随机Bearer会话、SHA-256摘要 | 密码哈希；会话过期与退出；按登录账号校验资源权限 |
+| 桌面客户端 | Electron 44.7.0、Node.js、Electron Packager | 复用H5资源，Mac ARM64打包，本机静态服务与窗口/权限限制 |
+| 测试 | JUnit Jupiter、MockMvc、Mockito、Node Test Runner | 独立MySQL集成测试、前端状态检查、构建与桌面规则验证 |
+| 构建与交付 | Maven、HBuilderX、Git、SHA-256资源清单 | 三端构建校验、源码/产物一致性检查、可复现验证脚本 |
 
-仅在**全新数据库**执行以下文件；已有开发数据库不要重复初始化或重复执行 ALTER TABLE。
+版本与源码位置见 [技术栈详解](docs/TECH_STACK.md)。
 
-使用 MySQL 客户端连接数据库后，按顺序执行后端 `sql` 目录中的文件：
+## 业务模块
 
-1. `00-create-database-and-products.sql`
-2. `lesson15-users.sql`
-3. `lesson19-login-sessions.sql`
-4. `lesson21-product-seller.sql`
-5. `lesson23-product-status.sql`
-6. `lesson24-product-cover.sql`
-7. `lesson25-product-version.sql`
-8. `lesson26-product-favorites.sql`
-9. `lesson27-product-comments.sql`
-10. `lesson28-comment-idempotency.sql`
+| 模块 | 已实现能力 |
+|---|---|
+| 账号 | 注册、登录、过期/退出、昵称修改、个人数据隔离 |
+| 商品 | 发布与封面上传、编辑、在售/下架/已售、分类、关键词、排序与分页 |
+| 发现与管理 | 收藏、浏览记录、卖家主页、个人发布筛选与状态统计 |
+| 发布草稿 | 按账号保存本机草稿、云端备份、搜索/分类/排序及恢复 |
+| 公开留言 | 分页发表、卖家标记、作者撤回、同次提交幂等 |
+| 购买意向 | 发起、取消、卖家接受、详情、买卖身份与状态筛选、完整历史 |
+| 意向内留言 | 参与方可见、发送幂等、作者撤回、个人已读进度、分页 |
+| 未读与时间 | 本页未读、身份全局总览、只看未读、最近收到排序与时间显示 |
 
-例如，在 MySQL 客户端中用 `SOURCE /完整路径/campus-market-server/sql/文件名.sql;` 依次执行。
+意向接受表示愿意沟通；支付、成交订单和库存锁定尚未实现。私密留言通过HTTP刷新获取，尚未实现WebSocket推送。
 
-这些脚本只建立结构，不包含真实用户、密码、会话、商品、留言或上传图片。启动后可以在页面注册自己的账号并发布商品。
+<a id="engineering"></a>
 
-## 启动后端
+## 实现亮点
 
-默认数据库地址为 `127.0.0.1:3306/campus_market`，后端端口为 `8080`。
+1. **并发修改控制。** 商品版本参与条件更新，旧页面修改冲突返回409；涉及购买意向的操作在事务中锁定必要记录，结合唯一约束维护业务状态。
+2. **幂等写入与手动恢复。** 发布和留言携带提交标识，同次请求重试返回原结果；相同标识改内容返回冲突。撤回保留记录，避免重试把已撤回内容重新展示。
+3. **账号与资源权限隔离。** 服务端从会话取得身份，校验卖家、买家和作者；意向内留言只对参与者开放。前端对Token、账号和页面状态变化使旧响应失效。
+4. **聚合查询与稳定分页。** SQL完成过滤、排序后再分页；全局未读、本页计数各有明确范围。当前页最近接收时间一次批量查询，避免逐条访问数据库。
+5. **可复查的跨端构建。** 共享uni-app业务代码，按平台处理服务器地址、图片和分享；构建生成源码/产物哈希清单，并检查小程序页面、组件及样式作用域。
+6. **桌面运行边界。** Electron渲染进程禁用Node访问，启用上下文隔离与沙箱；本机服务绑定回环地址，检查路径、Host、CSP、导航及请求目标。
 
-在 IDEA 中将 `campus-market-server` 作为 Maven 项目打开，选择 JDK 17，在启动类的运行配置中设置环境变量：
+对应源码与设计说明见 [实现索引](docs/TECH_STACK.md#source-map)。
+
+<a id="screenshots"></a>
+
+## 实际截图
+
+截图来自本机或隔离测试环境，账号、商品、留言均用于开发验收。不同截图对应功能完成时的版本，具体范围见 [验收记录](docs/VERIFICATION.md)。
+
+### Web：购买意向、未读总览与最近收到时间
+
+![Web购买意向列表](docs/assets/web-intents.png)
+
+### Mac：复用同一套页面的原生桌面应用
+
+![Mac桌面应用](docs/assets/mac-desktop.png)
+
+<details>
+<summary>展开：双方留言、商品已售、接收时间与微信开发者工具截图</summary>
+
+**意向内双方留言：**
+
+![双方留言](docs/assets/private-conversation.png)
+
+**个人商品的已售状态：**
+
+![已售商品](docs/assets/sold-products.png)
+
+**收到时间、空会话与记录对应：**
+
+![接收时间与空会话](docs/assets/received-times.png)
+
+**微信开发者工具历史功能验收（第29课）：** 当前版本的小程序编译与结构检查通过，未声称所有最新业务都在模拟器重新验收。
+
+![微信开发者工具模拟器](docs/assets/weixin-simulator.png)
+
+</details>
+
+## 运行与验证
+
+先按 [启动指南](docs/GETTING_STARTED.md) 建立全新数据库，在IDEA启动后端，再用HBuilderX运行客户端。前端由HBuilderX管理依赖。仓库中的平台AppID和局域网地址是示例，请使用自己的配置。
+
+| 验证 | 当前记录 | 如何复查 |
+|---|---:|---|
+| 后端集成与回归 | 504项；0失败/0错误/0跳过 | `python3 scripts/test_backend.py` |
+| 前端状态、接口与平台检查 | 42组 | `python3 scripts/test_frontend.py` |
+| 构建、存储与网络工具 | 37项 | 上述前端入口会一并执行 |
+| 桌面运行规则 | 17项 | 桌面目录安装依赖后 `npm test` |
+
+测试环境与命令要求详见 [测试与验收](docs/VERIFICATION.md)。后端脚本创建临时MySQL，前端脚本重建三端资源；首次执行可能需要下载依赖，完整后端验证约需10分钟，实际取决于机器。
+
+| 终端 | 已验证范围 |
+|---|---|
+| Web | 当前业务HTTP与浏览器验收 |
+| 微信小程序 | 当前版本编译/结构检查；历史页面有开发者工具模拟器验收 |
+| Mac ARM64 | 已打包并启动；当前资源一致，首页可读取后端商品 |
+| Android / iOS | App资源编译通过；尚未完成APK/IPA与手机真机验收 |
+
+## 仓库结构
 
 ```text
-DB_USERNAME=你的数据库用户名
-DB_PASSWORD=你的数据库密码
+campus-market-client/     uni-app共享页面、组件、API及构建工具
+campus-market-server/     Spring Boot后端、SQL与JUnit测试
+campus-market-desktop/    Electron主进程、静态服务与桌面测试
+scripts/                 全新建库、隔离后端及前端验证入口
+docs/                    技术栈、启动指南、验收与实际截图
 ```
 
-运行 `com.campus.market.CampusMarketServerApplication`。运行配置与真实密码不提交到 Git。
-
-也可以在终端配置环境变量后，从后端目录运行：
-
-```sh
-./mvnw spring-boot:run
-```
-
-## 启动前端
-
-用 HBuilderX 打开 `campus-market-client`，选择“运行到浏览器”。
-
-接口地址位于 `api/request.js`，当前为 `http://localhost:8080`。先启动后端，再打开前端；商品页的数据来源应显示“后端接口”。
-
-页面刷新后内存中的登录状态清除，需要重新登录。待确认留言草稿会在原账号重新登录后恢复。
-
-手机或小程序中的 localhost 指向设备自身。后续多端部署需要配置可访问的后端地址、HTTPS及相应平台网络设置；当前默认配置用于本机 Web 开发。
-
-## 后端验收
-
-当前版本包含83项后端测试。数据库集成测试使用 `LESSON*_DB_URL` 环境变量和严格测试库名称校验；直接运行 `mvn test` 时，未配置环境变量的数据库集成测试会跳过。
-
-仓库提供隔离验收脚本，需要 Python 3，并确保 `mysql`、`mysqld`、`mvn` 位于 PATH，JAVA_HOME 指向 JDK 17：
-
-```sh
-python3 scripts/test_backend.py
-```
-
-脚本创建临时 MySQL 数据目录，申请临时端口，建立第21～28课的专用测试库，执行迁移与全部测试，最后清理临时数据目录。它不连接真实开发数据库。运行日志保存在 `campus-market-server/target/integration.log`。
-
-测试覆盖身份与权限、分页和校验、图片、商品版本冲突、收藏、留言撤回、并发提交幂等、事务回滚和缓存响应头。
-
-## 关键接口
-
-| 功能 | 方法与路径 |
-|---|---|
-| 注册 / 登录 / 退出 | POST `/api/users/register`、`/api/users/login`、`/api/users/logout` |
-| 商品列表 / 发布 | GET / POST `/api/products` |
-| 商品详情 / 编辑 | GET / PUT `/api/products/{id}` |
-| 留言列表 / 发表 | GET / POST `/api/products/{id}/comments` |
-| 作者撤回 | DELETE `/api/products/{id}/comments/{commentId}` |
-
-需要登录的请求使用 `Authorization: Bearer <Token>`。具体字段与其他接口见对应 Controller 和前端 api 文件。
-
-留言发表提交 `{ "content": "留言内容", "requestId": "小写标准UUID" }`：首次201；同内容同标识重试200；同标识改内容409。幂等范围是用户、商品与提交标识，依赖原数据库记录保留。
+仓库包含源码与结构SQL。真实数据库、登录会话、上传数据、IDE配置、依赖目录和安装包保留在本机，不进入版本库。

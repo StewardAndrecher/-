@@ -31,9 +31,11 @@ public class ProductController {
     public ProductPageResponse listProducts(
             @RequestParam(name = "page", defaultValue = "1") int page,
             @RequestParam(name = "size", defaultValue = "10") int size,
-            @RequestParam(name = "keyword", defaultValue = "") String keyword
+            @RequestParam(name = "keyword", defaultValue = "") String keyword,
+            @RequestParam(name = "category", defaultValue = "") String category,
+            @RequestParam(name = "sort", defaultValue = "NEWEST") String sort
     ) {
-        return productService.listProducts(page, size, keyword);
+        return productService.listProducts(page, size, keyword, category, sort);
     }
 
     @GetMapping(value = "/{id}", produces = "application/json;charset=UTF-8")
@@ -49,10 +51,21 @@ public class ProductController {
     public ResponseEntity<ProductPageResponse> listMyProducts(
             @RequestParam(name = "page", defaultValue = "1") int page,
             @RequestParam(name = "size", defaultValue = "10") int size,
+            @RequestParam(name = "status", defaultValue = "") String status,
+            @RequestParam(name = "keyword", defaultValue = "") String keyword,
+            @RequestParam(name = "sort", defaultValue = "NEWEST") String sort,
             @RequestHeader(name = "Authorization", required = false) String authorization
     ) {
         return ResponseEntity.ok().header("Cache-Control", "no-store")
-                .body(productService.listMyProducts(page, size, authorization));
+                .body(productService.listMyProducts(page, size, status, keyword, sort, authorization));
+    }
+
+    @GetMapping(value = "/mine/summary", produces = "application/json;charset=UTF-8")
+    public ResponseEntity<ProductOwnerSummaryResponse> mySummary(
+            @RequestHeader(name = "Authorization", required = false) String authorization
+    ) {
+        return ResponseEntity.ok().header("Cache-Control", "no-store")
+                .body(productService.mySummary(authorization));
     }
 
     @PutMapping(value = "/{id}/status", consumes = "application/json",

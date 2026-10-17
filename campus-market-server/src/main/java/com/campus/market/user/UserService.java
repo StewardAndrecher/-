@@ -25,18 +25,13 @@ public class UserService {
         }
         String username = request.username() == null
                 ? "" : request.username().strip();
-        String nickname = request.nickname() == null
-                ? "" : request.nickname().strip();
+        String nickname = NicknameValidator.normalize(request.nickname());
         String password = request.password(); // 密码不去除首尾空格。
 
         if (!username.matches("[a-z0-9_]{4,32}")) {
             throw new InvalidUserException(
                     "用户名需要4～32位小写英文字母、数字或下划线"
             );
-        }
-        int nicknameLength = nickname.codePointCount(0, nickname.length());
-        if (nicknameLength < 1 || nicknameLength > 30) {
-            throw new InvalidUserException("昵称需要1～30个字符");
         }
         if (password == null || password.isBlank()) {
             throw new InvalidUserException("密码不能为空或全是空白字符");

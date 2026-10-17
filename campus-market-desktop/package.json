@@ -1,0 +1,23 @@
+{
+  "name": "campus-market-desktop",
+  "productName": "CampusMarket",
+  "version": "0.1.0",
+  "description": "校园集市桌面客户端：复用uni-app网页产物",
+  "private": true,
+  "type": "module",
+  "main": "src/main.mjs",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "sync:web": "node scripts/sync-web.mjs",
+    "test": "node --test test/*.test.mjs",
+    "start": "electron .",
+    "package": "node scripts/package.mjs",
+    "prepare:runtime": "node node_modules/electron/install.js"
+  },
+  "devDependencies": {
+    "electron": "44.7.0",
+    "@electron/packager": "20.3.0"
+  }
+}

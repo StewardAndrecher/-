@@ -1,6 +1,10 @@
 package com.campus.market.common;
 
 import com.campus.market.product.InvalidProductException;
+import com.campus.market.publication.InvalidPublicationException;
+import com.campus.market.publication.PublicationConflictException;
+import com.campus.market.seller.InvalidSellerException;
+import com.campus.market.seller.SellerNotFoundException;
 import com.campus.market.comment.InvalidCommentException;
 import com.campus.market.comment.CommentRequestConflictException;
 import com.campus.market.comment.CommentForbiddenException;
@@ -15,11 +19,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.CacheControl;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 import com.campus.market.user.InvalidUserException;
+import com.campus.market.user.UserProfileConflictException;
 import com.campus.market.user.UsernameAlreadyExistsException;
 import com.campus.market.user.InvalidCredentialsException;
 import com.campus.market.auth.LoginRequiredException;
@@ -29,6 +35,29 @@ import com.campus.market.media.ImageNotFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
+
+    @ExceptionHandler(InvalidPublicationException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidPublication(InvalidPublicationException exception) {
+        return ResponseEntity.badRequest().cacheControl(org.springframework.http.CacheControl.noStore())
+                .body(new ApiErrorResponse("INVALID_PUBLICATION",exception.getMessage()));
+    }
+    @ExceptionHandler(PublicationConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handlePublicationConflict(PublicationConflictException exception) {
+        return ResponseEntity.status(409).cacheControl(org.springframework.http.CacheControl.noStore())
+                .body(new ApiErrorResponse("PUBLICATION_CONFLICT",exception.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidSellerException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidSeller(InvalidSellerException exception) {
+        return ResponseEntity.badRequest().cacheControl(org.springframework.http.CacheControl.noStore())
+                .body(new ApiErrorResponse("INVALID_SELLER", exception.getMessage()));
+    }
+
+    @ExceptionHandler(SellerNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleSellerNotFound(SellerNotFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).cacheControl(org.springframework.http.CacheControl.noStore())
+                .body(new ApiErrorResponse("SELLER_NOT_FOUND", exception.getMessage()));
+    }
 
     @ExceptionHandler(ImageValidationException.class)
     public ResponseEntity<ApiErrorResponse> handleImageValidation(ImageValidationException exception) {
@@ -41,6 +70,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 .body(new ApiErrorResponse("IMAGE_NOT_FOUND", exception.getMessage()));
     }
 
+    @ExceptionHandler(com.campus.market.intent.PurchaseIntentException.class)
+    public ResponseEntity<ApiErrorResponse> handlePurchaseIntent(com.campus.market.intent.PurchaseIntentException exception) {
+        return ResponseEntity.status(exception.status()).cacheControl(CacheControl.noStore())
+                .body(new ApiErrorResponse(exception.code(),exception.getMessage()));
+    }
+
     private static final Logger log =
             LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
@@ -50,7 +85,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleLoginRequired(
             LoginRequiredException exception
     ) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).cacheControl(CacheControl.noStore())
                 .header("WWW-Authenticate", "Bearer")
                 .body(new ApiErrorResponse("LOGIN_REQUIRED", exception.getMessage()));
     }
@@ -143,6 +178,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 .body(new ApiErrorResponse(code, message));
     }
 
+    @ExceptionHandler(UserProfileConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleUserProfileConflict(UserProfileConflictException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).cacheControl(org.springframework.http.CacheControl.noStore())
+                .body(new ApiErrorResponse("USER_PROFILE_CONFLICT", exception.getMessage()));
+    }
+
     @ExceptionHandler(InvalidUserException.class)
     public ResponseEntity<ApiErrorResponse> handleInvalidUser(
             InvalidUserException exception
@@ -160,6 +201,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 new ApiErrorResponse("USERNAME_ALREADY_EXISTS", exception.getMessage())
         );
     }
+    @ExceptionHandler(com.campus.market.draft.DraftBackupException.class)
+    public ResponseEntity<ApiErrorResponse> handleDraftBackup(com.campus.market.draft.DraftBackupException ex) {
+        return ResponseEntity.status(ex.status()).cacheControl(CacheControl.noStore())
+                .body(new ApiErrorResponse(ex.code(), ex.getMessage()));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleUnexpected(
             Exception exception

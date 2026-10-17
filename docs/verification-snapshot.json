@@ -1,0 +1,57 @@
+{
+  "snapshot": "lesson66",
+  "verifiedAt": "2026-10-17",
+  "backend": {
+    "tests": 504,
+    "newTests": 20,
+    "regressionTests": 484,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "frontend": {
+    "scenarioGroups": 42,
+    "nodeTests": 37,
+    "sfcCount": 25
+  },
+  "desktopTests": 17,
+  "builds": [
+    {
+      "platform": "h5",
+      "files": 48,
+      "pages": null,
+      "scopedFiles": 0
+    },
+    {
+      "platform": "mp-weixin",
+      "files": 135,
+      "pages": 12,
+      "scopedFiles": 25
+    },
+    {
+      "platform": "app",
+      "files": 30,
+      "pages": 12,
+      "scopedFiles": 0,
+      "installable": false
+    }
+  ],
+  "boundaries": [
+    "Web业务验收",
+    "微信历史模拟器截图及当前编译/结构检查",
+    "Mac ARM64原生启动和资源一致性",
+    "App仅资源，未验收APK/IPA或手机真机"
+  ],
+  "publicationRecheck": {
+    "date": "2026-10-17",
+    "backendTests": 504,
+    "backendFailures": 0,
+    "backendErrors": 0,
+    "backendSkipped": 0,
+    "frontendGroups": 42,
+    "toolTests": 37,
+    "desktopTests": 17,
+    "freshSchemaTables": 11,
+    "repositoryLocalRunnersVerified": true
+  }
+}

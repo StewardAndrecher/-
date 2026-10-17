@@ -18,3 +18,11 @@
 *.key
 __pycache__/
 *.pyc
+
+# Packaged desktop resources and local verification workspaces
+**/web/
+**/.web-history/
+**/.web-staging-*/
+scripts/.frontend-work/
+.test-results/
+*.bundle

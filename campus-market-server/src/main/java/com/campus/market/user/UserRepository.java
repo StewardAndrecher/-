@@ -40,6 +40,20 @@ public class UserRepository {
         return id.longValue();
     }
 
+    // 在事务中锁定当前账号行；昵称修改不接收客户端传入的用户ID。
+    public Optional<UserResponse> findProfileForUpdate(long id) {
+        return jdbcTemplate.query("SELECT id, username, nickname FROM users WHERE id = ? FOR UPDATE",
+                (rs, row) -> new UserResponse(rs.getLong("id"), rs.getString("username"),
+                        rs.getString("nickname")), id).stream().findFirst();
+    }
+
+    public int updateNickname(long id, String nickname, String expectedNickname) {
+        return jdbcTemplate.update("""
+                UPDATE users SET nickname = ?
+                WHERE id = ? AND CAST(nickname AS BINARY) = CAST(? AS BINARY)
+                """, nickname, id, expectedNickname);
+    }
+
     public Optional<UserCredentials> findCredentialsByUsername(String username) {
         String sql = """
                 SELECT id, username, password_hash, nickname

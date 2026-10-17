@@ -30,7 +30,7 @@
       <text class="hint">放弃本机草稿只清除这份待确认内容，不会撤回已经发表的留言。</text>
       <button :disabled="loading || sending || withdrawingId > 0" @click="discardPendingDraft">放弃本机待确认草稿</button>
     </view>
-    <text v-if="status !== 'ON_SALE'" class="hint">商品已下架，暂不支持新留言。</text>
+    <text v-if="status !== 'ON_SALE'" class="hint">{{ status === 'SOLD' ? '商品已售出，暂不支持新留言。' : '商品已下架，暂不支持新留言。' }}</text>
     <button v-else-if="!currentUser" @click="openLogin">登录后留言</button>
     <view v-else-if="!pendingSubmission && !pendingStorageError">
       <text class="author">{{ currentUser.nickname }}，发表留言</text>

@@ -41,6 +41,36 @@
       "style": {
         "navigationBarTitleText": "我的收藏"
       }
+    },
+    {
+      "path": "pages/dev/connection",
+      "style": {
+        "navigationBarTitleText": "开发连接诊断"
+      }
+    },
+    {
+      "path": "pages/user/profile",
+      "style": {
+        "navigationBarTitleText": "账号资料"
+      }
+    },
+    {
+      "path": "pages/product/history",
+      "style": {
+        "navigationBarTitleText": "最近浏览"
+      }
+    },
+    {
+      "path": "pages/user/store",
+      "style": {
+        "navigationBarTitleText": "卖家主页"
+      }
+    },
+    {
+      "path": "pages/intent/detail",
+      "style": {
+        "navigationBarTitleText": "购买意向详情"
+      }
     }
   ],
   "globalStyle": {

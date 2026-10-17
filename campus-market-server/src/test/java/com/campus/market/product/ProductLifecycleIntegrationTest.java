@@ -151,7 +151,7 @@ class ProductLifecycleIntegrationTest {
     }
     @Test
     void validatesStatusValuesWithoutChangingData() throws Exception {
-        for(String body:new String[]{"{}","{\"status\":null}","{\"status\":\"SOLD\"}","{"}) {
+        for(String body:new String[]{"{}","{\"status\":null}","{\"status\":\"DELETED\"}","{"}) {
             check(status(body),400);
             assertEquals(ProductStatus.ON_SALE,repository.findById(productId).orElseThrow().status());
         }
