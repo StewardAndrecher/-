@@ -10,6 +10,7 @@
       <text v-if="!currentUser" class="hint">登录后可以发起购买意向。</text>
       <text v-else-if="product.seller?.id === currentUser.id" class="hint">这是你发布的商品，不能向自己提交购买意向。</text>
       <text v-else-if="!product.seller" class="hint">该历史商品尚未登记卖家，暂时不能提交购买意向。</text>
+      <text v-else-if="reserved && !pending" class="hint">商品暂不能下单，当前不接受新的购买意向。</text>
       <text v-else-if="product.status !== 'ON_SALE' && !pending" class="hint">商品已下架或售出，不接受新的购买意向。</text>
       <button v-if="!currentUser" :disabled="disabled || !active" @click="openLogin">前往登录</button>
       <button v-else-if="eligible || pending" :disabled="disabled || !active || sending" :loading="sending" @click="submit">
@@ -25,9 +26,9 @@
 import { ref, computed, watch, onUnmounted } from 'vue'
 import { currentUser, getToken } from '@/utils/session.js'
 import { createPurchaseIntent } from '@/api/purchase-intent.js'
-const props = defineProps({ product: { type: Object, required: true }, disabled: { type: Boolean, default: false }, active: { type: Boolean, default: true } })
+const props = defineProps({ reserved: { type: Boolean, default: false }, product: { type: Object, required: true }, disabled: { type: Boolean, default: false }, active: { type: Boolean, default: true } })
 const sending = ref(false), pending = ref(null), result = ref(null), message = ref('')
-const eligible = computed(() => currentUser.value && props.product.seller && props.product.seller.id !== currentUser.value.id && props.product.status === 'ON_SALE')
+const eligible = computed(() => !props.reserved && currentUser.value && props.product.seller && props.product.seller.id !== currentUser.value.id && props.product.status === 'ON_SALE')
 let generation = 0, closed = false
 function statusLabel(status) { return { PENDING: '待沟通', CANCELLED: '已取消', ACCEPTED: '已接受' }[status] || '未知状态' }
 function money(cents) { return (cents / 100).toFixed(2) }

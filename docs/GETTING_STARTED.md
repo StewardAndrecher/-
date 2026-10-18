@@ -6,9 +6,10 @@
 
 - JDK17，Maven或后端目录的Maven Wrapper。
 - MySQL，支持InnoDB与CHECK约束；当前完整验收使用MySQL9.6.0。
+- Redis，提供redis-server/redis-cli；默认使用两个独立实例，详见下文。
 - HBuilderX及Vue3 uni-app编译支持。
 - Node.js22.12+；Electron桌面端使用npm安装锁定依赖。
-- Python3用于仓库验证脚本。完整隔离数据库验证入口支持macOS/Linux，要求mysql、mysqld、mysqldump、mvn在PATH。
+- Python3用于仓库验证脚本。完整隔离数据库验证入口支持macOS/Linux，要求mysql、mysqld、mysqldump、mvn和redis-server在PATH（也可设置REDIS_SERVER_BIN）。
 
 ```sh
 git clone https://github.com/StewardAndrecher/-.git campus-market
@@ -23,7 +24,7 @@ cd campus-market
 mysql --host=127.0.0.1 --port=3306 --user=root --password < scripts/init-database.sql
 ```
 
-客户端会提示输入你的数据库密码。脚本按顺序整合20份结构SQL，不含业务数据；已有课程数据库应按尚未执行的迁移升级，不能重复初始化。
+客户端会提示输入你的数据库密码。脚本按顺序整合24份结构SQL，不含业务数据；已有课程数据库应按尚未执行的迁移升级，不能重复初始化。
 
 需要逐份查看时，顺序如下：
 
@@ -47,9 +48,30 @@ mysql --host=127.0.0.1 --port=3306 --user=root --password < scripts/init-databas
 18. `lesson59-intent-messages.sql`
 19. `lesson60-intent-message-withdrawal.sql`
 20. `lesson61-intent-message-read-state.sql`
+21. `lesson69-market-orders.sql`
+22. `lesson70-order-lifecycle.sql`
+23. `lesson71-order-fulfillment.sql`
+24. `lesson73-order-events.sql`
+
+已有订单库升级第73课时先停止旧后端、备份并执行新迁移，再启动新后端。建表与历史快照补录是两条SQL，不是整个脚本原子提交，不要重复执行建表。
 
 
-## 3. 后端
+## 3. Redis与后端
+
+先在后端目录启动两个项目专属Redis实例（安装Redis后，redis-server与redis-cli需在PATH）：
+
+```sh
+cd campus-market-server
+python3 scripts/redis-local.py start
+python3 scripts/redis-local.py start --role login
+python3 scripts/redis-local.py status
+python3 scripts/redis-local.py status --role login
+```
+
+默认缓存6379/128MB/allkeys-lru，登录保护6380/32MB/noeviction，只监听127.0.0.1、保护模式开启，不启用持久化。脚本遇到其他实例占用会退出，不会清空或停止未知实例。更换端口时同时设置REDIS_PORT、LOGIN_REDIS_PORT及后端对应环境变量；两个实例必须使用不同端口，不能靠Redis逻辑database隔离淘汰策略。
+
+商品缓存故障会回退MySQL；登录保护故障时新登录返回503，已有会话继续有效。详细配置见[缓存](../campus-market-server/REDIS.md)和[登录限流](../campus-market-server/LOGIN_PROTECTION.md)。下面命令从仓库根目录执行，或在IDEA中设置后端运行配置。
+
 
 用IDEA打开campus-market-server作为Maven项目，选择JDK17。启动配置设置：
 
@@ -67,7 +89,7 @@ cd campus-market-server
 ./mvnw spring-boot:run
 ```
 
-可检查就绪接口：http://localhost:8080/api/health/readiness 。启动后自行在页面注册账号、发布商品；仓库不提供共享真实账号。
+可检查就绪接口：http://localhost:8080/api/health/readiness 。启动后自行在页面注册账号、发布商品；仓库不提供共享真实账号。可注册两个开发账号，依次验证下单、模拟付款、卖家交付、买家收货和订单时间线；模拟付款不扣款。
 
 ## 4. Web与微信小程序
 

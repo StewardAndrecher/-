@@ -11,7 +11,8 @@ public class PurchaseIntentService {
  private static final long MAX_SAFE=9007199254740991L;
  private final PurchaseIntentRepository repository;
  private final SessionService sessions;
- public PurchaseIntentService(PurchaseIntentRepository repository,SessionService sessions) { this.repository=repository;this.sessions=sessions; }
+ private final com.campus.market.order.OrderRepository orders;
+ public PurchaseIntentService(PurchaseIntentRepository repository,SessionService sessions,com.campus.market.order.OrderRepository orders) { this.repository=repository;this.sessions=sessions;this.orders=orders; }
  // READ_COMMITTED lets a waiting duplicate read the record committed by the first request.
  @Transactional(isolation=Isolation.READ_COMMITTED)
  public Created create(long productId,CreateRequest request,String auth) {
@@ -26,6 +27,7 @@ public class PurchaseIntentService {
   if(product.sellerId()==null)throw new PurchaseIntentException(409,"INTENT_SELLER_UNAVAILABLE","该历史商品尚未登记卖家，无法发起购买意向");
   if(product.sellerId()==buyerId)throw new PurchaseIntentException(403,"SELF_PURCHASE","不能购买自己发布的商品");
   if(!"ON_SALE".equals(product.status()))throw new PurchaseIntentException(409,"PRODUCT_UNAVAILABLE","商品已下架或售出，无法发起新的购买意向");
+  orders.requireUnreserved(productId);
   if(product.version()!=request.productVersion())throw new PurchaseIntentException(409,"PRODUCT_CHANGED","商品信息已变化，请刷新详情并重新确认");
   long id=repository.insert(product,buyerId);
   return new Created(repository.read(id),false);
@@ -57,6 +59,7 @@ public class PurchaseIntentService {
   if(!"PENDING".equals(owned.status()))throw new PurchaseIntentException(409,"PURCHASE_INTENT_CHANGED","意向已取消，不能接受，请刷新列表确认");
   if(product==null||product.sellerId()==null||product.sellerId()!=sellerId||!"ON_SALE".equals(product.status()))
    throw new PurchaseIntentException(409,"PRODUCT_UNAVAILABLE","商品当前不在售或卖家已变化，不能接受新的意向");
+  orders.requireUnreserved(productId);
   if(repository.acceptOwned(intentId,sellerId)!=1)throw new PurchaseIntentException(409,"PURCHASE_INTENT_CHANGED","意向状态已变化，请刷新列表后确认");
   return new Accepted(repository.read(intentId),false);
  }

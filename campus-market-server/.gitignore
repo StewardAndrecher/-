@@ -33,3 +33,6 @@ build/
 .vscode/
 
 /data/uploads/
+
+# Local Redis runtime/cache/logs; never commit binaries or runtime data.
+/data/redis/

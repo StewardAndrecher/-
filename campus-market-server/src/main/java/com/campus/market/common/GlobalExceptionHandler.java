@@ -207,6 +207,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 .body(new ApiErrorResponse(ex.code(), ex.getMessage()));
     }
 
+    @ExceptionHandler(com.campus.market.order.OrderException.class)
+    public ResponseEntity<ApiErrorResponse> handleOrder(com.campus.market.order.OrderException exception) {
+        return ResponseEntity.status(exception.status()).cacheControl(CacheControl.noStore())
+                .body(new ApiErrorResponse(exception.code(),exception.getMessage()));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleUnexpected(
             Exception exception
@@ -220,11 +226,28 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 )
         );
     }
+    @ExceptionHandler(com.campus.market.auth.LoginRateLimitedException.class)
+    public ResponseEntity<ApiErrorResponse> handleLoginRateLimited(
+            com.campus.market.auth.LoginRateLimitedException exception) {
+        return ResponseEntity.status(429).cacheControl(CacheControl.noStore())
+                .header("Pragma", "no-cache")
+                .header("Retry-After", String.valueOf(exception.retryAfterSeconds()))
+                .body(new ApiErrorResponse("LOGIN_RATE_LIMITED", exception.getMessage()));
+    }
+
+    @ExceptionHandler(com.campus.market.auth.LoginProtectionUnavailableException.class)
+    public ResponseEntity<ApiErrorResponse> handleLoginProtectionUnavailable(
+            com.campus.market.auth.LoginProtectionUnavailableException exception) {
+        return ResponseEntity.status(503).cacheControl(CacheControl.noStore())
+                .header("Pragma", "no-cache").header("Retry-After", "5")
+                .body(new ApiErrorResponse("LOGIN_PROTECTION_UNAVAILABLE", exception.getMessage()));
+    }
+
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<ApiErrorResponse> handleInvalidCredentials(
             InvalidCredentialsException exception
     ) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).cacheControl(CacheControl.noStore()).body(
                 new ApiErrorResponse("INVALID_CREDENTIALS", exception.getMessage())
         );
     }

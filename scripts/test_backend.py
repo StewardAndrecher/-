@@ -1,17 +1,19 @@
-# -*- coding: utf-8 -*-
+# coding: utf-8
 from pathlib import Path
 import subprocess, tempfile, shutil, time, socket, os
 os.chdir(Path(__file__).resolve().parents[1])
-result_dir=Path('.test-results');result_dir.mkdir(exist_ok=True)
-root=Path(tempfile.mkdtemp(prefix='campus-lesson24-',dir=None))
+Path('.test-results').mkdir(exist_ok=True)
+root=Path(tempfile.mkdtemp(prefix='campus-lesson24-'))
 server=None
-if os.name!='posix':raise RuntimeError('Run this isolated MySQL workflow on macOS or Linux')
+redis_process=None
+login_redis_process=None
 mysql=shutil.which('mysql')
 mysqldump=shutil.which('mysqldump')
 maven=shutil.which('mvn')
-if not all([mysql,mysqldump,maven]):raise RuntimeError('mysql, mysqldump and mvn must be on PATH')
+if not all([mysql,mysqldump,maven]):raise RuntimeError('mysql, mysqldump, mvn must be on PATH')
 mysqld=shutil.which('mysqld')
 if not mysqld:raise RuntimeError('mysqld must be on PATH')
+if os.name!='posix':raise RuntimeError('Use macOS or Linux for the isolated test runner')
 try:
     init=subprocess.run([mysqld,'--no-defaults','--initialize-insecure',f'--datadir={root}/data'],capture_output=True,text=True,timeout=40)
     if init.returncode: raise RuntimeError(init.stderr[-2000:])
@@ -183,13 +185,80 @@ INSERT INTO products(title,description,price_in_cents) VALUES('迁移前教材',
     if r.returncode:raise RuntimeError(r.stderr)
     r=sql('CREATE DATABASE campus_lesson65_verify CHARACTER SET utf8mb4; USE campus_lesson65_verify;\n'+final64_schema)
     if r.returncode:raise RuntimeError(r.stderr)
+    r=sql('CREATE DATABASE campus_lesson67_verify CHARACTER SET utf8mb4; USE campus_lesson67_verify;\n'+final64_schema)
+    if r.returncode:raise RuntimeError(r.stderr)
     r=sql('CREATE DATABASE campus_lesson66_verify CHARACTER SET utf8mb4; USE campus_lesson66_verify;\n'+final64_schema)
     if r.returncode:raise RuntimeError(r.stderr)
+    r=sql('CREATE DATABASE campus_lesson68_verify CHARACTER SET utf8mb4; USE campus_lesson68_verify;\n'+final64_schema)
+    if r.returncode:raise RuntimeError(r.stderr)
+    r=sql('CREATE DATABASE campus_lesson69_verify CHARACTER SET utf8mb4; USE campus_lesson69_verify;\n'+final64_schema)
+    if r.returncode:raise RuntimeError(r.stderr)
+    r=sql('CREATE DATABASE campus_lesson70_verify CHARACTER SET utf8mb4; USE campus_lesson70_verify;\n'+final64_schema)
+    if r.returncode:raise RuntimeError(r.stderr)
+    r=sql('CREATE DATABASE campus_lesson71_verify CHARACTER SET utf8mb4; USE campus_lesson71_verify;\n'+final64_schema)
+    if r.returncode:raise RuntimeError(r.stderr)
+    r=sql('CREATE DATABASE campus_lesson72_verify CHARACTER SET utf8mb4; USE campus_lesson72_verify;\n'+final64_schema)
+    if r.returncode:raise RuntimeError(r.stderr)
+    r=sql('CREATE DATABASE campus_lesson73_verify CHARACTER SET utf8mb4; USE campus_lesson73_verify;\n'+final64_schema)
+    if r.returncode:raise RuntimeError(r.stderr)
+    for database in sql('SHOW DATABASES').stdout.splitlines():
+        if database.startswith('campus_lesson') and database.endswith('_verify'):
+            migration=Path('campus-market-server/sql/lesson69-market-orders.sql').read_text().replace('USE campus_market;', 'USE '+database+';')
+            r=sql(migration)
+            if r.returncode:raise RuntimeError(r.stderr)
+            r=sql(Path('campus-market-server/sql/lesson70-order-lifecycle.sql').read_text().replace('USE campus_market;', 'USE '+database+';'))
+            if r.returncode:raise RuntimeError(r.stderr)
+            r=sql(Path('campus-market-server/sql/lesson71-order-fulfillment.sql').read_text().replace('USE campus_market;', 'USE '+database+';'))
+            if r.returncode:raise RuntimeError(r.stderr)
+    for database in sql('SHOW DATABASES').stdout.splitlines():
+        if database.startswith('campus_lesson') and database.endswith('_verify'):
+            r=sql(Path('campus-market-server/sql/lesson73-order-events.sql').read_text().replace('USE campus_market;', 'USE '+database+';'))
+            if r.returncode:raise RuntimeError(r.stderr)
     # Old intention regression fixtures now exercise the current read model as well.
     for number in range(53,59):
         r=sql(Path('campus-market-server/sql/lesson59-intent-messages.sql').read_text().replace('USE campus_market;',f'USE campus_lesson{number}_verify;')+'\n'+withdrawal_migration.replace('USE campus_market;',f'USE campus_lesson{number}_verify;'))
         if r.returncode:raise RuntimeError(r.stderr)
+    with socket.socket() as probe:
+        probe.bind(('127.0.0.1',0));redis_port=probe.getsockname()[1]
+    # Copy Redis only into this temporary test directory; never alter a system runtime.
+    redis_source=os.environ.get('REDIS_SERVER_BIN') or shutil.which('redis-server')
+    if not redis_source:raise RuntimeError('redis-server must be on PATH, or set REDIS_SERVER_BIN')
+    redis_source=Path(redis_source).resolve();redis_bin=root/'redis-server';shutil.copy2(redis_source,redis_bin)
+    if __import__('sys').platform=='darwin':
+        deps=subprocess.check_output(['/usr/bin/otool','-L',str(redis_bin)],text=True)
+        for line in deps.splitlines()[1:]:
+            original=line.strip().split(' (',1)[0]
+            if '@@HOMEBREW_PREFIX@@' in original:
+                prefix=Path(*redis_source.parts[:redis_source.parts.index('Cellar')]) if 'Cellar' in redis_source.parts else Path('/opt/homebrew')
+                resolved=original.replace('@@HOMEBREW_PREFIX@@',str(prefix))
+                if not Path(resolved).is_file():raise RuntimeError('Redis dependency not found: '+resolved)
+                subprocess.run(['/usr/bin/install_name_tool','-change',original,resolved,str(redis_bin)],check=True)
+        subprocess.run(['/usr/bin/codesign','--force','--sign','-',str(redis_bin)],check=True,capture_output=True)
+
+    redis_process=subprocess.Popen([str(redis_bin),'--bind','127.0.0.1','--port',str(redis_port),'--save','','--appendonly','no','--dir',str(root),'--logfile',str(root/'redis.log')],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+    deadline=time.monotonic()+5
+    while time.monotonic()<deadline:
+        try:
+            with socket.create_connection(('127.0.0.1',redis_port),timeout=.3):break
+        except OSError:time.sleep(.1)
+    else:raise RuntimeError('Isolated Redis did not start')
+    with socket.socket() as probe:
+        probe.bind(('127.0.0.1',0));login_redis_port=probe.getsockname()[1]
+    login_redis_process=subprocess.Popen([str(redis_bin),'--bind','127.0.0.1','--port',str(login_redis_port),'--save','','--appendonly','no','--dir',str(root),'--logfile',str(root/'login-redis.log'),'--maxmemory','32mb','--maxmemory-policy','noeviction'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+    deadline=time.monotonic()+5
+    while time.monotonic()<deadline:
+        try:
+            with socket.create_connection(('127.0.0.1',login_redis_port),timeout=.3):break
+        except OSError:time.sleep(.1)
+    else:raise RuntimeError('Isolated login Redis did not start')
     env=os.environ.copy()
+    env['LOGIN_PROTECTION_ENABLED']='false'
+    env['LESSON68_REDIS_PORT']=str(login_redis_port)
+
+    env['PRODUCT_CACHE_ENABLED']='false'
+    env['ORDER_TIMEOUT_SWEEP_ENABLED']='false'
+    env['LESSON67_REDIS_PORT']=str(redis_port)
+
     # Each test context gets its own pool; cap only the isolated test runner.
     env['SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE']='4'
     env['SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE']='0'
@@ -222,11 +291,22 @@ INSERT INTO products(title,description,price_in_cents) VALUES('迁移前教材',
     env['LESSON62_DB_URL']=env['LESSON24_DB_URL'].replace('campus_lesson24_verify','campus_lesson62_verify')
     env['LESSON63_DB_URL']=env['LESSON24_DB_URL'].replace('campus_lesson24_verify','campus_lesson63_verify')
     env['LESSON66_DB_URL']=env['LESSON24_DB_URL'].replace('campus_lesson24_verify','campus_lesson66_verify')
+    env['LESSON73_DB_URL']=env['LESSON24_DB_URL'].replace('campus_lesson24_verify','campus_lesson73_verify')
+    env['LESSON72_DB_URL']=env['LESSON24_DB_URL'].replace('campus_lesson24_verify','campus_lesson72_verify')
+    env['LESSON71_DB_URL']=env['LESSON24_DB_URL'].replace('campus_lesson24_verify','campus_lesson71_verify')
+    env['LESSON70_DB_URL']=env['LESSON24_DB_URL'].replace('campus_lesson24_verify','campus_lesson70_verify')
+    env['LESSON69_DB_URL']=env['LESSON24_DB_URL'].replace('campus_lesson24_verify','campus_lesson69_verify')
+    env['LESSON68_DB_URL']=env['LESSON24_DB_URL'].replace('campus_lesson24_verify','campus_lesson68_verify')
+    env['LESSON67_DB_URL']=env['LESSON24_DB_URL'].replace('campus_lesson24_verify','campus_lesson67_verify')
     env['LESSON65_DB_URL']=env['LESSON24_DB_URL'].replace('campus_lesson24_verify','campus_lesson65_verify')
     env['LESSON64_DB_URL']=env['LESSON24_DB_URL'].replace('campus_lesson24_verify','campus_lesson64_verify')
     env['LESSON24_UPLOAD_DIR']=str(root/'uploads')
+    if os.environ.get('CACHE_TEST_ONLY') == 'true':
+        test_selection='ProductDetailCacheIntegrationTest'
+    else:
+        test_selection=None
     with open('.test-results/backend.log','w') as log:
-        result=subprocess.run([maven,*(['-o'] if os.environ.get('MAVEN_OFFLINE')=='1' else []),'-q','-f','campus-market-server/pom.xml','-Dtest=PurchaseIntentReceivedTimeIntegrationTest,PurchaseIntentSortIntegrationTest,PurchaseIntentUnreadSummaryIntegrationTest,PurchaseIntentUnreadFilterIntegrationTest,PurchaseIntentUnreadIntegrationTest,PurchaseIntentMessageReadStateIntegrationTest,PurchaseIntentMessageWithdrawalIntegrationTest,PurchaseIntentMessageIntegrationTest,PurchaseIntentDetailIntegrationTest,PurchaseIntentSummaryIntegrationTest,PurchaseIntentStatusFilterIntegrationTest,PurchaseIntentAcceptanceIntegrationTest,PurchaseIntentCancellationIntegrationTest,PurchaseIntentIntegrationTest,DraftBackupSortIntegrationTest,DraftBackupCategoryIntegrationTest,DraftBackupQueryIntegrationTest,DraftBackupIntegrationTest,ProductOwnerSummaryIntegrationTest,ProductMineSortIntegrationTest,ProductMineSearchIntegrationTest,ProductMineFilterIntegrationTest,ProductSoldIntegrationTest,PublicationIntegrationTest,SellerStoreIntegrationTest,ProductPopularityIntegrationTest,UserProfileIntegrationTest,ProductSortIntegrationTest,CategoryIntegrationTest,HealthEndpointIntegrationTest,DatabaseUnavailableHealthTest,CommentIdempotencyIntegrationTest,CommentIntegrationTest,FavoriteIntegrationTest,ProductVersionIntegrationTest,ProductImageIntegrationTest,ProductLifecycleIntegrationTest,ProductEditIntegrationTest,ProductOwnershipIntegrationTest,PasswordConfigTest,CampusMarketServerApplicationTests','clean','test'],env=env,stdout=log,stderr=subprocess.STDOUT,timeout=660)
+        result=subprocess.run([maven,*(['-o'] if os.environ.get('MAVEN_OFFLINE')=='1' else []),'-q','-f','campus-market-server/pom.xml','-Dtest=OrderTimelineIntegrationTest,OrderQueryIntegrationTest,OrderFulfillmentIntegrationTest,OrderLifecycleIntegrationTest,OrderIntegrationTest,LoginRateLimitIntegrationTest,ProductDetailCacheIntegrationTest,PurchaseIntentReceivedTimeIntegrationTest,PurchaseIntentSortIntegrationTest,PurchaseIntentUnreadSummaryIntegrationTest,PurchaseIntentUnreadFilterIntegrationTest,PurchaseIntentUnreadIntegrationTest,PurchaseIntentMessageReadStateIntegrationTest,PurchaseIntentMessageWithdrawalIntegrationTest,PurchaseIntentMessageIntegrationTest,PurchaseIntentDetailIntegrationTest,PurchaseIntentSummaryIntegrationTest,PurchaseIntentStatusFilterIntegrationTest,PurchaseIntentAcceptanceIntegrationTest,PurchaseIntentCancellationIntegrationTest,PurchaseIntentIntegrationTest,DraftBackupSortIntegrationTest,DraftBackupCategoryIntegrationTest,DraftBackupQueryIntegrationTest,DraftBackupIntegrationTest,ProductOwnerSummaryIntegrationTest,ProductMineSortIntegrationTest,ProductMineSearchIntegrationTest,ProductMineFilterIntegrationTest,ProductSoldIntegrationTest,PublicationIntegrationTest,SellerStoreIntegrationTest,ProductPopularityIntegrationTest,UserProfileIntegrationTest,ProductSortIntegrationTest,CategoryIntegrationTest,HealthEndpointIntegrationTest,DatabaseUnavailableHealthTest,CommentIdempotencyIntegrationTest,CommentIntegrationTest,FavoriteIntegrationTest,ProductVersionIntegrationTest,ProductImageIntegrationTest,ProductLifecycleIntegrationTest,ProductEditIntegrationTest,ProductOwnershipIntegrationTest,PasswordConfigTest,CampusMarketServerApplicationTests','clean','test'],env=env,stdout=log,stderr=subprocess.STDOUT,timeout=1200)
     report_path=Path('campus-market-server/target/surefire-reports/com.campus.market.product.ProductImageIntegrationTest.txt')
     if not report_path.exists():raise RuntimeError(Path('.test-results/backend.log').read_text()[-5000:])
     report=report_path.read_text()
@@ -250,11 +330,19 @@ INSERT INTO products(title,description,price_in_cents) VALUES('迁移前教材',
     print(Path('campus-market-server/target/surefire-reports/com.campus.market.user.UserProfileIntegrationTest.txt').read_text())
     import xml.etree.ElementTree as ET
     suites=[ET.parse(p).getroot().attrib for p in Path('campus-market-server/target/surefire-reports').glob('TEST-*.xml')]
-    assert sum(int(s['tests']) for s in suites)==504
+    assert sum(int(s['tests']) for s in suites)==724
     assert all(int(s['failures'])==int(s['errors'])==int(s['skipped'])==0 for s in suites)
-    print('PASS: all 504 backend tests, including 20 received-time tests and 484 regression tests; zero failures/errors/skips.')
+    print('PASS: all 724 backend tests, including 33 timeline tests and 691 regression tests; zero failures/errors/skips.')
 
 finally:
+    if login_redis_process is not None and login_redis_process.poll() is None:
+        login_redis_process.terminate()
+        try:login_redis_process.wait(timeout=5)
+        except subprocess.TimeoutExpired:login_redis_process.kill();login_redis_process.wait()
+    if redis_process is not None and redis_process.poll() is None:
+        redis_process.terminate()
+        try:redis_process.wait(timeout=5)
+        except subprocess.TimeoutExpired:redis_process.kill();redis_process.wait()
     if server is not None and server.poll() is None:
         server.terminate()
         try:server.wait(timeout=15)

@@ -12,6 +12,7 @@
       <text v-if="accountMessage" class="request-error">{{ accountMessage }}</text>
       <button v-if="currentUser" size="mini" :disabled="checkingAccount || exiting || publishing || uploadingCover"
         @click="openMyProducts">我的发布</button>
+      <button v-if="currentUser" size="mini" :disabled="checkingAccount || exiting || publishing || uploadingCover" @click="openOrders">我的订单</button>
       <button v-if="currentUser" size="mini" @click="openMyFavorites">我的收藏</button>
       <button size="mini" @click="openHistory">最近浏览</button>
       <button v-if="currentUser" size="mini" :disabled="checkingAccount || exiting || publishing || uploadingCover"
@@ -201,6 +202,8 @@ function openSeller(id) {
   uni.navigateTo({ url: sellerStorePath(id),
     fail: () => uni.showToast({ title: '打开卖家主页失败', icon: 'none' }) })
 }
+
+function openOrders() { uni.navigateTo({ url: '/pages/order/list', fail: () => uni.showToast({ title: '打开订单列表失败', icon: 'none' }) }) }
 
 function openHistory() {
   uni.navigateTo({ url: '/pages/product/history',

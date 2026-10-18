@@ -36,7 +36,7 @@ for(const [scenario,device] of [['release','ios'],['unknown-device','unknown'],[
 // 编译产物只读核验；不执行原生SDK，也不把mock当手机验收。
 const {verifyBuild}=await import('../../campus-market-client/tools/build-check.mjs')
 const output=process.argv[2]||'campus-market-client/unpackage/verified/app';const checked=await verifyBuild(output)
-assert.equal(checked.pages,12);assert.equal(checked.installable,false)
+assert.equal(checked.pages,14);assert.equal(checked.installable,false)
 const manifest=JSON.parse(fs.readFileSync(output+'/manifest.json','utf8'));assert.equal(manifest.name,'校园集市');assert.equal(manifest.id,'__UNI__CAMPUSDEMO')
 const compiled=fs.readFileSync(output+'/app-service.js','utf8');assert.ok(compiled.includes('无法识别App设备'));assert.ok(compiled.includes('uni.getDeviceInfo'))
-console.log('PASS: Android/iOS developer and production configuration; unsafe/local-only origins blocked; anonymous/authenticated App requests and 401 logout; LAN image upload/preview; anonymous development health probes; production/unknown devices/environment block requests before transport; 12-page production App resources verified. Native device UI/installation not tested.')
+console.log('PASS: Android/iOS developer and production configuration; unsafe/local-only origins blocked; anonymous/authenticated App requests and 401 logout; LAN image upload/preview; anonymous development health probes; production/unknown devices/environment block requests before transport; 14-page production App resources verified. Native device UI/installation not tested.')

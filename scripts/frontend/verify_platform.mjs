@@ -42,10 +42,10 @@ for(const version of ['develop','trial','unknown']) {
  }
 }
 const app=JSON.parse(fs.readFileSync('campus-market-client/unpackage/verified/mp-weixin/app.json','utf8'))
-assert.equal(app.pages.length,12)
+assert.equal(app.pages.length,14)
 for(const page of app.pages)for(const extension of ['js','json','wxml','wxss'])assert(fs.existsSync(`campus-market-client/unpackage/verified/mp-weixin/${page}.${extension}`))
 const project=JSON.parse(fs.readFileSync('campus-market-client/unpackage/verified/mp-weixin/project.config.json','utf8'))
 assert.equal(project.appid,'wx0000000000000000');assert.equal(project.compileType,'miniprogram')
 const platformModule=fs.readFileSync('campus-market-client/unpackage/verified/mp-weixin/config/server.js','utf8')
 assert(platformModule.includes('getAccountInfoSync'));assert(platformModule.includes('weixin'))
-console.log('PASS: Web/WeChat platform selection, develop/trial/release, invalid/unknown config blocks requests and uploads, shared API/image base, Token/multipart, supplied AppID, and all twelve compiled page artifacts.')
+console.log('PASS: Web/WeChat platform selection, develop/trial/release, invalid/unknown config blocks requests and uploads, shared API/image base, Token/multipart, supplied AppID, and all fourteen compiled page artifacts.')

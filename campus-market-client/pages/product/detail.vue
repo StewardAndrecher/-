@@ -41,7 +41,9 @@
 
     <ProductShare v-if="product && !loading && !errorMessage" :product="product" :disabled="commentsBusy" />
 
-    <PurchaseIntentAction v-if="product && !loading && !errorMessage" :key="product.id" :product="product" :disabled="commentsBusy" :active="purchaseActive" />
+    <ProductOrderAction v-if="product && !loading && !errorMessage" :key="'order-'+product.id" :product="product" :disabled="commentsBusy" :active="purchaseActive" @refresh="fetchProduct" @availability="orderAvailable = $event" />
+
+    <PurchaseIntentAction :reserved="orderAvailable === false" v-if="product && !loading && !errorMessage" :key="product.id" :product="product" :disabled="commentsBusy" :active="purchaseActive" />
     <ProductComments v-if="product" :key="product.id" :product-id="product.id" :status="product.status" @busy="commentsBusy = $event" />
 
     <button
@@ -67,6 +69,7 @@ import FavoriteCount from '@/components/FavoriteCount.vue'
 import { isValidFavoriteCount } from '@/utils/product-popularity.js'
 import ProductComments from '@/components/ProductComments.vue'
 import ProductShare from '@/components/ProductShare.vue'
+import ProductOrderAction from '@/components/ProductOrderAction.vue'
 import PurchaseIntentAction from '@/components/PurchaseIntentAction.vue'
 import { parseProductId, canShareProduct, wechatProductShare, webHashProductId } from '@/utils/product-share.js'
 // #ifdef MP-WEIXIN
@@ -82,6 +85,7 @@ const errorMessage = ref('')
 const commentsBusy = ref(false)
 const historyMessage = ref('')
 const purchaseActive = ref(false)
+const orderAvailable = ref(null)
 let detailActive = false
 let detailClosed = false
 let detailRequest = 0

@@ -1,5 +1,6 @@
 package com.campus.market.user;
 
+import com.campus.market.auth.LoginRateLimiter;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -10,18 +11,21 @@ public class LoginService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final String dummyPasswordHash;
+    private final LoginRateLimiter limiter;
 
     public LoginService(
             UserRepository userRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            LoginRateLimiter limiter
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.limiter = limiter;
         // 用户不存在时，也进行一次密码校验。
         this.dummyPasswordHash = passwordEncoder.encode("dummy-login-password");
     }
 
-    public UserResponse login(LoginUserRequest request) {
+    public UserResponse login(LoginUserRequest request, String remoteAddress) {
         if (request == null) {
             throw new InvalidUserException("登录信息不能为空");
         }
@@ -40,14 +44,23 @@ public class LoginService {
             throw new InvalidUserException("密码长度超过允许的上限");
         }
 
-        var result = userRepository.findCredentialsByUsername(username);
-        String hash = result.map(UserCredentials::passwordHash)
-                .orElse(dummyPasswordHash);
-        boolean matches = passwordEncoder.matches(password, hash);
-
+        var attempt = limiter.begin(username, remoteAddress);
+        java.util.Optional<UserCredentials> result;
+        boolean matches;
+        try {
+            result = userRepository.findCredentialsByUsername(username);
+            String hash = result.map(UserCredentials::passwordHash).orElse(dummyPasswordHash);
+            matches = passwordEncoder.matches(password, hash);
+        } catch (RuntimeException infrastructureFailure) {
+            // 数据库或密码组件故障不算密码错误；IP总尝试预算仍保留。
+            limiter.aborted(attempt);
+            throw infrastructureFailure;
+        }
         if (result.isEmpty() || !matches) {
+            limiter.failed(attempt);
             throw new InvalidCredentialsException();
         }
+        limiter.succeeded(attempt);
         UserCredentials user = result.get();
         return new UserResponse(user.id(), user.username(), user.nickname());
     }

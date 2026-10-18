@@ -16,11 +16,16 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final SessionService sessionService;
     private final ImageService imageService;
+    private final ProductDetailCache detailCache;
+    private final com.campus.market.order.OrderRepository orders;
 
-    public ProductService(ProductRepository productRepository, SessionService sessionService, ImageService imageService) {
+    public ProductService(ProductRepository productRepository, SessionService sessionService, ImageService imageService,
+                          ProductDetailCache detailCache, com.campus.market.order.OrderRepository orders) {
         this.productRepository = productRepository;
         this.sessionService = sessionService;
         this.imageService = imageService;
+        this.detailCache = detailCache;
+        this.orders = orders;
     }
 
     @Transactional(
@@ -123,9 +128,11 @@ public class ProductService {
                 && product.priceInCents() == fields.priceInCents()
                 && Objects.equals(product.coverImageId(), coverId)
                 && product.category().code().equals(category)) return product;
+        orders.requireUnreserved(id);
         int updated = productRepository.updateOwnedProduct(id, user.id(), fields.title(),
                 fields.description(), fields.priceInCents(), coverId, request.version(), category);
         if (updated != 1) throw new ProductConflictException("商品已被更新，请重新加载后再保存");
+        detailCache.evictAfterCommit(id, product.version());
         return productRepository.findById(id)
                 .orElseThrow(() -> new IllegalStateException("未能读取刚修改的商品"));
     }
@@ -238,18 +245,32 @@ public class ProductService {
         // 当前版本的无变化请求不递增版本；旧版本即使状态相同也拒绝。
         if (product.status() == request.status()) return product;
         if (product.status() == ProductStatus.SOLD) throw new ProductConflictException("商品已售出，不能重新上架或下架");
+        orders.requireUnreserved(id);
         if (productRepository.updateOwnedStatus(id, user.id(), request.status(), request.version()) != 1) {
             throw new ProductConflictException("商品已被更新，请刷新后确认状态再操作");
         }
+        detailCache.evictAfterCommit(id, product.version());
         return productRepository.findById(id)
                 .orElseThrow(() -> new IllegalStateException("未能读取商品状态"));
     }
 
     public ProductResponse getProduct(long id, String authorization) {
         validateId(id);
+        if (detailCache.canRead()) {
+            // 缓存命中仍查可见性和当前版本，旧读请求晚回填也无法公开下架商品。
+            var state = productRepository.findDetailState(id)
+                    .orElseThrow(() -> new ProductNotFoundException("商品不存在"));
+            if (state.status() == ProductStatus.ON_SALE) {
+                var cached = detailCache.read(id, state.version());
+                if (cached.isPresent()) return cached.get().response(state);
+            }
+        }
         var product = productRepository.findById(id)
                 .orElseThrow(() -> new ProductNotFoundException("商品不存在"));
-        if (product.status() == ProductStatus.ON_SALE) return product;
+        if (product.status() == ProductStatus.ON_SALE) {
+            detailCache.putPublic(product);
+            return product;
+        }
         if (authorization == null || authorization.isBlank()) {
             throw new ProductNotFoundException("商品不存在或不在售");
         }

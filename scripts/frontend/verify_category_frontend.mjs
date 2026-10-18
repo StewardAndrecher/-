@@ -12,7 +12,7 @@ function walk(dir){for(const item of fs.readdirSync(dir,{withFileTypes:true})){
  else if(p.endsWith('.vue') && item.name!=='App.vue'){const {descriptor,errors}=parse(fs.readFileSync(p,'utf8'),{filename:p});assert.deepEqual(errors,[])
  const compiled=compileScript(descriptor,{id:p});assert.deepEqual(compileTemplate({source:descriptor.template.content,id:p,filename:p,compilerOptions:{bindingMetadata:compiled.bindings}}).errors,[]);count++}
 }}
-walk(root);assert.equal(count,25)
+walk(root);assert.equal(count,28)
 let calls=[]
 globalThis.uni={request:o=>calls.push(o)}
 const categories=await import('../.frontend-work/esm/api/category.js')

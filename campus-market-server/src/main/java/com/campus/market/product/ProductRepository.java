@@ -106,6 +106,22 @@ public class ProductRepository {
         return findById(id, false);
     }
 
+    public Optional<ProductDetailState> findDetailState(long id) {
+        String sql = """
+                SELECT p.id, p.status, p.version, u.id AS seller_id, u.nickname AS seller_nickname,
+                       (SELECT COUNT(*) FROM product_favorites pf WHERE pf.product_id = p.id) AS favorite_count
+                FROM products p LEFT JOIN users u ON u.id = p.seller_id
+                WHERE p.id = ?
+                """;
+        return jdbcTemplate.query(sql, (rs, rowNum) -> {
+            Long sellerId = rs.getObject("seller_id", Long.class);
+            SellerResponse seller = sellerId == null ? null
+                    : new SellerResponse(sellerId, rs.getString("seller_nickname"));
+            return new ProductDetailState(rs.getLong("id"), ProductStatus.valueOf(rs.getString("status")),
+                    rs.getLong("version"), seller, rs.getLong("favorite_count"));
+        }, id).stream().findFirst();
+    }
+
     // 必须在事务中调用，行锁持续到事务结束。
     public Optional<ProductResponse> findByIdForUpdate(long id) {
         return findById(id, true);

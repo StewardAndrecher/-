@@ -2,119 +2,124 @@
 
 ![Campus Market 项目概览](docs/assets/project-overview.svg)
 
-**Java / Spring Boot + Vue 3 / uni-app + MySQL + Electron。** 围绕校园闲置流转，实现商品发布、个人收藏、购买意向和双方留言；一套前端复用到 Web、微信小程序、App资源与Mac桌面端。
+**Java 17 / Spring Boot + MySQL + Redis + Vue 3 / uni-app + Electron。** 面向校园闲置交易，实现商品管理、买卖沟通、订单流转和进度记录，复用同一套前端业务代码覆盖Web、微信小程序、App资源与Mac桌面端。
 
-[技术栈](#tech-stack) · [实现亮点](#engineering) · [实际截图](#screenshots) · [本地启动](docs/GETTING_STARTED.md) · [架构与技术说明](docs/TECH_STACK.md) · [测试与验收](docs/VERIFICATION.md)
+[技术栈](#tech-stack) · [工程亮点](#engineering) · [实际截图](#screenshots) · [启动指南](docs/GETTING_STARTED.md) · [架构与源码索引](docs/TECH_STACK.md) · [测试与验收](docs/VERIFICATION.md)
 
-本仓库包含截至第66课的完整实现、建库脚本、测试和验收截图。GitHub链接用于源码与项目展示；业务服务目前在本机运行。
+仓库包含截至第73课的完整源码、24份有序建库脚本、测试入口和实际验收截图。业务服务目前在本机运行，GitHub链接用于源码与项目展示。
 
 <a id="tech-stack"></a>
 
 ## 技术栈
 
-| 层次 | 实际使用 | 在项目中的职责 |
+| 层次 | 实际使用 | 项目中的职责 |
 |---|---|---|
-| 前端 | Vue 3、Composition API、JavaScript、uni-app | 共享页面与组件，Web/微信/App条件编译，统一请求与会话管理 |
-| 后端 | Java 17、Spring Boot 4.1.1、Spring MVC | REST API、Controller/Service/Repository分层、统一异常响应 |
-| 数据访问 | Spring JDBC / JdbcTemplate、MySQL / InnoDB | 参数化SQL、事务、行锁、版本条件更新、唯一约束、分组聚合 |
-| 身份认证 | BCrypt、随机Bearer会话、SHA-256摘要 | 密码哈希；会话过期与退出；按登录账号校验资源权限 |
-| 桌面客户端 | Electron 44.7.0、Node.js、Electron Packager | 复用H5资源，Mac ARM64打包，本机静态服务与窗口/权限限制 |
-| 测试 | JUnit Jupiter、MockMvc、Mockito、Node Test Runner | 独立MySQL集成测试、前端状态检查、构建与桌面规则验证 |
-| 构建与交付 | Maven、HBuilderX、Git、SHA-256资源清单 | 三端构建校验、源码/产物一致性检查、可复现验证脚本 |
+| 共享前端 | Vue 3、Composition API、JavaScript、uni-app | 共享页面与组件，多端条件编译、统一请求、内存会话与异步响应保护 |
+| 后端 | Java 17、Spring Boot 4.1.1、Spring MVC | REST API，Controller / Service / Repository分层，参数、权限及异常处理 |
+| 数据库 | MySQL / InnoDB、Spring JDBC / JdbcTemplate | 参数化SQL、事务与行锁、版本条件更新、唯一约束、聚合与稳定分页 |
+| Redis | Spring Data Redis、Lettuce、Lua | 商品正文版本缓存、TTL抖动、提交后失效；独立实例的登录限流与并发占位 |
+| 身份认证 | BCrypt、随机Bearer会话、SHA-256摘要 | 密码哈希、会话过期/退出，按当前账号校验资源归属 |
+| 桌面 | Electron 44.7.0、Node.js、Electron Packager | 复用H5，Mac ARM64打包、回环静态服务、窗口和请求权限限制 |
+| 验证与交付 | JUnit、MockMvc、Mockito、Node Test Runner、Maven、HBuilderX | 临时MySQL/Redis集成测试、跨端构建、源码/产物SHA-256清单 |
 
-版本与源码位置见 [技术栈详解](docs/TECH_STACK.md)。
+版本、设计与代码入口见[技术栈详解](docs/TECH_STACK.md)。
 
 ## 业务模块
 
 | 模块 | 已实现能力 |
 |---|---|
-| 账号 | 注册、登录、过期/退出、昵称修改、个人数据隔离 |
-| 商品 | 发布与封面上传、编辑、在售/下架/已售、分类、关键词、排序与分页 |
-| 发现与管理 | 收藏、浏览记录、卖家主页、个人发布筛选与状态统计 |
-| 发布草稿 | 按账号保存本机草稿、云端备份、搜索/分类/排序及恢复 |
-| 公开留言 | 分页发表、卖家标记、作者撤回、同次提交幂等 |
-| 购买意向 | 发起、取消、卖家接受、详情、买卖身份与状态筛选、完整历史 |
-| 意向内留言 | 参与方可见、发送幂等、作者撤回、个人已读进度、分页 |
-| 未读与时间 | 本页未读、身份全局总览、只看未读、最近收到排序与时间显示 |
+| 账号与登录保护 | 注册、登录、退出、昵称修改；来源IP和账号维度Redis限流，429/503恢复提示 |
+| 商品与发现 | 发布/封面上传、编辑、在售/下架/已售、分类、搜索、排序、分页、收藏、浏览记录、卖家主页 |
+| 发布草稿 | 按账号保存本机草稿、云端备份与恢复、搜索/分类/排序 |
+| 公开与私密沟通 | 商品留言；购买意向发起/取消/接受；意向内双方留言、幂等发送、撤回、阅读进度及未读聚合 |
+| 正式订单流程 | 版本校验与下单幂等、有效订单唯一占用、15分钟待付款超时、取消释放、模拟付款、卖家交付、买家收货 |
+| 订单查询 | 我买到的/我卖出的、六种状态筛选、分页、角色全量统计、已完成模拟交易金额 |
+| 进度时间线 | 状态与记录同事务、操作人/昵称快照、系统超时记录、参与者私有查询、历史状态快照迁移 |
 
-意向接受表示愿意沟通；支付、成交订单和库存锁定尚未实现。私密留言通过HTTP刷新获取，尚未实现WebSocket推送。
+**付款目前为教学模拟，不发生真实扣款或资金结算。** 购买意向只表示沟通意愿，订单独立承担商品占用和交易状态；私密留言采用HTTP刷新。
 
 <a id="engineering"></a>
 
-## 实现亮点
+## 工程亮点
 
-1. **并发修改控制。** 商品版本参与条件更新，旧页面修改冲突返回409；涉及购买意向的操作在事务中锁定必要记录，结合唯一约束维护业务状态。
-2. **幂等写入与手动恢复。** 发布和留言携带提交标识，同次请求重试返回原结果；相同标识改内容返回冲突。撤回保留记录，避免重试把已撤回内容重新展示。
-3. **账号与资源权限隔离。** 服务端从会话取得身份，校验卖家、买家和作者；意向内留言只对参与者开放。前端对Token、账号和页面状态变化使旧响应失效。
-4. **聚合查询与稳定分页。** SQL完成过滤、排序后再分页；全局未读、本页计数各有明确范围。当前页最近接收时间一次批量查询，避免逐条访问数据库。
-5. **可复查的跨端构建。** 共享uni-app业务代码，按平台处理服务器地址、图片和分享；构建生成源码/产物哈希清单，并检查小程序页面、组件及样式作用域。
-6. **桌面运行边界。** Electron渲染进程禁用Node访问，启用上下文隔离与沙箱；本机服务绑定回环地址，检查路径、Host、CSP、导航及请求目标。
+1. **订单并发与幂等。** 下单携带商品版本和提交标识，事务按商品→订单顺序加锁；条件更新与唯一约束保证商品有效订单占用。重复付款、交付和收货返回已有结果，不重复变更或记录。
+2. **状态与记录同事务。** 创建、付款、交付、收货、取消、超时均追加操作记录，任一步失败一起回滚。订单和时间线在同一只读快照中读取；历史订单只补明确标注的状态快照。
+3. **Redis缓存一致性与降级。** 缓存键包含商品ID/版本，提交后删除旧版本键，TTL附加随机值。每次仍查数据库当前状态、版本及动态信息；Redis失败时回退数据库，未把缓存命中宣传为零SQL。
+4. **Redis Lua登录保护。** 来源预算、账号预算、在途占位与TTL一次脚本执行；成功核验按票据清理，避免并发请求越过额度。保护实例与可淘汰缓存实例分离，保护服务故障返回503。
+5. **权限与异步响应保护。** 操作身份由服务端会话确定，私密记录仅参与者可读；前端在账号切换、页面隐藏或卸载后使旧请求失效。写入成功但随后读取失败时保留已确认结果。
+6. **统计与跨端交付。** 状态过滤在SQL分页前执行，角色全量统计和列表共享事务快照；uni-app三端资源与Mac内嵌H5均生成并校验源码/产物哈希。
 
-对应源码与设计说明见 [实现索引](docs/TECH_STACK.md#source-map)。
+[查看架构、实现边界及对应源码](docs/TECH_STACK.md#source-map)。
 
 <a id="screenshots"></a>
 
 ## 实际截图
 
-截图来自本机或隔离测试环境，账号、商品、留言均用于开发验收。不同截图对应功能完成时的版本，具体范围见 [验收记录](docs/VERIFICATION.md)。
+截图来自本机或隔离验收环境，订单、账号与留言用于开发演示。范围见[验收说明](docs/VERIFICATION.md)。
 
-### Web：购买意向、未读总览与最近收到时间
+### 订单进度时间线：创建 → 模拟付款 → 交付 → 收货
 
-![Web购买意向列表](docs/assets/web-intents.png)
+![订单进度时间线](docs/assets/order-timeline.png)
 
-### Mac：复用同一套页面的原生桌面应用
+### 状态筛选与当前角色的全量交易统计
 
-![Mac桌面应用](docs/assets/mac-desktop.png)
+![买家订单与模拟金额统计](docs/assets/order-summary.png)
 
 <details>
-<summary>展开：双方留言、商品已售、接收时间与微信开发者工具截图</summary>
+<summary>展开：历史订单迁移、Mac桌面、双方留言与小程序截图</summary>
+
+**旧订单仅补历史状态快照，迁移后的操作继续追加：**
+
+![历史订单补录](docs/assets/order-history.png)
+
+**新版Mac应用实际启动、登录并读取空订单页：**
+
+![Mac订单页](docs/assets/mac-orders.png)
+
+**购买意向、未读总览与最近收到时间（第66课）：**
+
+![Web购买意向](docs/assets/web-intents.png)
 
 **意向内双方留言：**
 
 ![双方留言](docs/assets/private-conversation.png)
 
-**个人商品的已售状态：**
+**微信开发者工具历史详情页验收（第29课）：** 当前源码已重新完成小程序编译和结构检查，未声称所有最新业务都重新做过模拟器验收。
 
-![已售商品](docs/assets/sold-products.png)
-
-**收到时间、空会话与记录对应：**
-
-![接收时间与空会话](docs/assets/received-times.png)
-
-**微信开发者工具历史功能验收（第29课）：** 当前版本的小程序编译与结构检查通过，未声称所有最新业务都在模拟器重新验收。
-
-![微信开发者工具模拟器](docs/assets/weixin-simulator.png)
+![微信开发者工具](docs/assets/weixin-simulator.png)
 
 </details>
 
 ## 运行与验证
 
-先按 [启动指南](docs/GETTING_STARTED.md) 建立全新数据库，在IDEA启动后端，再用HBuilderX运行客户端。前端由HBuilderX管理依赖。仓库中的平台AppID和局域网地址是示例，请使用自己的配置。
+按[启动指南](docs/GETTING_STARTED.md)建立全新MySQL数据库、启动两个独立Redis实例，在IDEA运行后端，再用HBuilderX运行前端。仓库AppID和局域网IP是示例值。
 
-| 验证 | 当前记录 | 如何复查 |
+| 验证 | 当前通过记录 | 仓库复查入口 |
 |---|---:|---|
-| 后端集成与回归 | 504项；0失败/0错误/0跳过 | `python3 scripts/test_backend.py` |
-| 前端状态、接口与平台检查 | 42组 | `python3 scripts/test_frontend.py` |
-| 构建、存储与网络工具 | 37项 | 上述前端入口会一并执行 |
+| 后端集成与回归 | 724项，48个测试类；0失败/错误/跳过 | `python3 scripts/test_backend.py` |
+| 前端状态、接口与平台 | 47组 | `python3 scripts/test_frontend.py` |
+| 构建、存储与网络工具 | 37项 | 上述前端入口一并执行 |
 | 桌面运行规则 | 17项 | 桌面目录安装依赖后 `npm test` |
 
-测试环境与命令要求详见 [测试与验收](docs/VERIFICATION.md)。后端脚本创建临时MySQL，前端脚本重建三端资源；首次执行可能需要下载依赖，完整后端验证约需10分钟，实际取决于机器。
+后端验证创建临时MySQL及两个临时Redis；前端入口重新构建三端资源。环境和验证边界见[测试说明](docs/VERIFICATION.md)。
 
 | 终端 | 已验证范围 |
 |---|---|
-| Web | 当前业务HTTP与浏览器验收 |
-| 微信小程序 | 当前版本编译/结构检查；历史页面有开发者工具模拟器验收 |
-| Mac ARM64 | 已打包并启动；当前资源一致，首页可读取后端商品 |
-| Android / iOS | App资源编译通过；尚未完成APK/IPA与手机真机验收 |
+| Web | 当前业务HTTP和浏览器操作；最新订单四步时间线、历史快照与统计 |
+| 微信小程序 | 当前源码编译、14页和组件结构检查；历史页面有开发者工具验收 |
+| Mac ARM64 | 新包实际启动/登录/空订单页检查，53个Web资源与源码构建一致 |
+| Android / iOS | App资源编译通过；尚未完成APK/IPA与手机验收 |
 
 ## 仓库结构
 
 ```text
-campus-market-client/     uni-app共享页面、组件、API及构建工具
-campus-market-server/     Spring Boot后端、SQL与JUnit测试
+campus-market-client/     uni-app页面、组件、API及构建工具
+campus-market-server/     Spring Boot、Redis/Lua、SQL与JUnit测试
 campus-market-desktop/    Electron主进程、静态服务与桌面测试
 scripts/                 全新建库、隔离后端及前端验证入口
-docs/                    技术栈、启动指南、验收与实际截图
+docs/                    架构、启动指南、验收与实际截图
 ```
 
-仓库包含源码与结构SQL。真实数据库、登录会话、上传数据、IDE配置、依赖目录和安装包保留在本机，不进入版本库。
+当前尚未接入真实支付、退款售后、WebSocket实时推送、线上部署或大规模性能压测。操作记录为应用层只追加，数据库管理员仍可修改，删除订单会级联删除记录；未将其描述为不可篡改存证。
+
+源码和结构SQL公开；真实数据库、会话、图片上传目录、IDE配置、依赖、运行日志及安装包保留本机。

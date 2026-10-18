@@ -295,3 +295,120 @@ CREATE TABLE purchase_intent_message_reads (
  CONSTRAINT fk_intent_read_message FOREIGN KEY(last_read_message_id) REFERENCES purchase_intent_messages(id),
  CONSTRAINT chk_intent_read_message CHECK(last_read_message_id>0)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ===== lesson69-market-orders.sql =====
+-- 第69课：新增订单表，保留原有商品、账号及购买意向数据。
+USE campus_market;
+CREATE TABLE market_orders (
+ id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+ product_id BIGINT NOT NULL,
+ buyer_id BIGINT NOT NULL,
+ seller_id BIGINT NOT NULL,
+ request_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ product_title_snapshot VARCHAR(50) NOT NULL,
+ price_in_cents_snapshot BIGINT NOT NULL,
+ product_version_snapshot BIGINT NOT NULL,
+ buyer_nickname_snapshot VARCHAR(30) NOT NULL,
+ seller_nickname_snapshot VARCHAR(30) NOT NULL,
+ status VARCHAR(24) NOT NULL DEFAULT 'PENDING_PAYMENT',
+ created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+ cancelled_at DATETIME(6) NULL,
+ active_product_id BIGINT GENERATED ALWAYS AS
+  (CASE WHEN status <> 'CANCELLED' THEN product_id ELSE NULL END) STORED,
+ CONSTRAINT uq_order_active_product UNIQUE(active_product_id),
+ CONSTRAINT uq_order_buyer_request UNIQUE(buyer_id,request_id),
+ CONSTRAINT fk_order_product FOREIGN KEY(product_id) REFERENCES products(id),
+ CONSTRAINT fk_order_buyer FOREIGN KEY(buyer_id) REFERENCES users(id),
+ CONSTRAINT fk_order_seller FOREIGN KEY(seller_id) REFERENCES users(id),
+ CONSTRAINT chk_order_participants CHECK(buyer_id <> seller_id),
+ CONSTRAINT chk_order_price CHECK(price_in_cents_snapshot BETWEEN 1 AND 99999999),
+ CONSTRAINT chk_order_version CHECK(product_version_snapshot BETWEEN 0 AND 9007199254740991),
+ CONSTRAINT chk_order_status CHECK(status IN ('PENDING_PAYMENT','CANCELLED')),
+ CONSTRAINT chk_order_cancelled CHECK(
+  (status='PENDING_PAYMENT' AND cancelled_at IS NULL) OR
+  (status='CANCELLED' AND cancelled_at IS NOT NULL)),
+ INDEX idx_order_buyer_created(buyer_id,created_at DESC,id DESC),
+ INDEX idx_order_seller_created(seller_id,created_at DESC,id DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ===== lesson70-order-lifecycle.sql =====
+-- 第70课：扩展订单状态；单条ALTER由MySQL原子DDL提交。
+USE campus_market;
+ALTER TABLE market_orders
+ DROP CHECK chk_order_status,
+ DROP CHECK chk_order_cancelled,
+ ADD COLUMN payment_due_at DATETIME(6) GENERATED ALWAYS AS (created_at + INTERVAL 15 MINUTE) STORED,
+ ADD COLUMN paid_at DATETIME(6) NULL,
+ ADD COLUMN closed_at DATETIME(6) NULL,
+ ADD COLUMN payment_kind VARCHAR(16) NULL,
+ MODIFY COLUMN active_product_id BIGINT GENERATED ALWAYS AS
+  (CASE WHEN status IN ('PENDING_PAYMENT','PAID') THEN product_id ELSE NULL END) STORED,
+ ADD CONSTRAINT chk_order_status CHECK(status IN ('PENDING_PAYMENT','CANCELLED','PAID','CLOSED_TIMEOUT')),
+ ADD CONSTRAINT chk_order_lifecycle CHECK(
+  (status='PENDING_PAYMENT' AND cancelled_at IS NULL AND paid_at IS NULL AND closed_at IS NULL AND payment_kind IS NULL) OR
+  (status='CANCELLED' AND cancelled_at IS NOT NULL AND paid_at IS NULL AND closed_at IS NULL AND payment_kind IS NULL) OR
+  (status='PAID' AND cancelled_at IS NULL AND paid_at IS NOT NULL AND paid_at < payment_due_at AND closed_at IS NULL AND payment_kind IS NOT NULL AND payment_kind='SIMULATED') OR
+  (status='CLOSED_TIMEOUT' AND cancelled_at IS NULL AND paid_at IS NULL AND closed_at IS NOT NULL AND closed_at >= payment_due_at AND payment_kind IS NULL)
+ ),
+ ADD INDEX idx_order_timeout(status,payment_due_at,id);
+
+-- ===== lesson71-order-fulfillment.sql =====
+-- 第71课：卖家交付与买家收货。单条ALTER保留既有订单字段。
+USE campus_market;
+ALTER TABLE market_orders
+ DROP CHECK chk_order_status,
+ DROP CHECK chk_order_lifecycle,
+ ADD COLUMN delivered_at DATETIME(6) NULL,
+ ADD COLUMN completed_at DATETIME(6) NULL,
+ MODIFY COLUMN active_product_id BIGINT GENERATED ALWAYS AS
+  (CASE WHEN status IN ('PENDING_PAYMENT','PAID','DELIVERED','COMPLETED') THEN product_id ELSE NULL END) STORED,
+ ADD CONSTRAINT chk_order_status CHECK(status IN ('PENDING_PAYMENT','CANCELLED','PAID','CLOSED_TIMEOUT','DELIVERED','COMPLETED')),
+ ADD CONSTRAINT chk_order_lifecycle CHECK(
+  (status='PENDING_PAYMENT' AND cancelled_at IS NULL AND paid_at IS NULL AND closed_at IS NULL AND payment_kind IS NULL AND delivered_at IS NULL AND completed_at IS NULL) OR
+  (status='CANCELLED' AND cancelled_at IS NOT NULL AND paid_at IS NULL AND closed_at IS NULL AND payment_kind IS NULL AND delivered_at IS NULL AND completed_at IS NULL) OR
+  (status='CLOSED_TIMEOUT' AND cancelled_at IS NULL AND paid_at IS NULL AND closed_at IS NOT NULL AND closed_at >= payment_due_at AND payment_kind IS NULL AND delivered_at IS NULL AND completed_at IS NULL) OR
+  (status IN ('PAID','DELIVERED','COMPLETED') AND cancelled_at IS NULL AND paid_at IS NOT NULL AND paid_at < payment_due_at AND closed_at IS NULL AND payment_kind IS NOT NULL AND payment_kind='SIMULATED' AND (
+   (status='PAID' AND delivered_at IS NULL AND completed_at IS NULL) OR
+   (status='DELIVERED' AND delivered_at IS NOT NULL AND delivered_at >= paid_at AND completed_at IS NULL) OR
+   (status='COMPLETED' AND delivered_at IS NOT NULL AND delivered_at >= paid_at AND completed_at IS NOT NULL AND completed_at >= delivered_at)
+  ))
+ );
+
+-- ===== lesson73-order-events.sql =====
+-- 第73课：先停旧后端，再建表并补录历史快照，最后启动新后端。
+USE campus_market;
+CREATE TABLE order_events (
+ order_id BIGINT NOT NULL,
+ event_no INT NOT NULL,
+ action VARCHAR(32) NOT NULL,
+ from_status VARCHAR(24) NULL,
+ to_status VARCHAR(24) NOT NULL,
+ actor_role VARCHAR(8) NOT NULL,
+ actor_id BIGINT NULL,
+ actor_nickname VARCHAR(50) NOT NULL,
+ occurred_at DATETIME(6) NOT NULL,
+ recorded_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+ PRIMARY KEY(order_id,event_no),
+ CONSTRAINT uq_order_event_action UNIQUE(order_id,action),
+ CONSTRAINT fk_event_order FOREIGN KEY(order_id) REFERENCES market_orders(id) ON DELETE CASCADE,
+ CONSTRAINT fk_event_actor FOREIGN KEY(actor_id) REFERENCES users(id),
+ CONSTRAINT chk_event_no CHECK(event_no BETWEEN 1 AND 4),
+ CONSTRAINT chk_event_time CHECK(recorded_at >= occurred_at),
+ CONSTRAINT chk_event_actor CHECK(
+  (actor_role IN ('BUYER','SELLER') AND actor_id IS NOT NULL) OR
+  (actor_role='SYSTEM' AND actor_id IS NULL)
+ ),
+ CONSTRAINT chk_event_transition CHECK(
+  (action='CREATED' AND event_no=1 AND from_status IS NULL AND to_status='PENDING_PAYMENT' AND actor_role='BUYER') OR
+  (action='SIMULATED_PAYMENT' AND from_status IS NOT NULL AND from_status='PENDING_PAYMENT' AND to_status='PAID' AND actor_role='BUYER') OR
+  (action='DELIVERED' AND from_status IS NOT NULL AND from_status='PAID' AND to_status='DELIVERED' AND actor_role='SELLER') OR
+  (action='COMPLETED' AND from_status IS NOT NULL AND from_status='DELIVERED' AND to_status='COMPLETED' AND actor_role='BUYER') OR
+  (action='CANCELLED' AND from_status IS NOT NULL AND from_status='PENDING_PAYMENT' AND to_status='CANCELLED' AND actor_role='BUYER') OR
+  (action='TIMEOUT_CLOSED' AND from_status IS NOT NULL AND from_status='PENDING_PAYMENT' AND to_status='CLOSED_TIMEOUT' AND actor_role='SYSTEM') OR
+  (action='HISTORY_SNAPSHOT' AND event_no=1 AND from_status IS NULL AND to_status IN ('PENDING_PAYMENT','PAID','DELIVERED','COMPLETED','CANCELLED','CLOSED_TIMEOUT') AND actor_role='SYSTEM')
+ )
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- 这是迁移时观察到的状态，不伪造历史操作人或历史事件发生时间。
+INSERT INTO order_events(order_id,event_no,action,from_status,to_status,actor_role,actor_id,actor_nickname,occurred_at,recorded_at)
+ SELECT id,1,'HISTORY_SNAPSHOT',NULL,status,'SYSTEM',NULL,'迁移补录',CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6)
+ FROM market_orders;

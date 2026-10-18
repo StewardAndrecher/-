@@ -1,0 +1,42 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+const require=createRequire(import.meta.url),{parse}=require(process.env.UNI_COMPILER_HOME+'/node_modules/@vue/compiler-sfc');
+const root='campus-market-client/',read=p=>fs.readFileSync(root+p,'utf8'),strip=t=>t.replace(/^import .*$/mg,'').replaceAll('export ','');
+const utils=new Function(strip(read('utils/order.js'))+';return{validOrder,orderId,orderPath,orderStatus,orderFilters,validOrderSummary,orderSummaryCount,formatOrderMoney};')();
+const zero={total:0,pendingPayment:0,paid:0,delivered:0,completed:0,cancelled:0,closedTimeout:0,completedAmountInCents:0};
+const summary={total:17,pendingPayment:1,paid:1,delivered:1,completed:12,cancelled:1,closedTimeout:1,completedAmountInCents:42000};
+assert(utils.validOrderSummary(zero));assert(utils.validOrderSummary(summary));assert.equal(utils.orderSummaryCount(summary,'COMPLETED'),12);
+for(const value of [null,{}, {...summary,total:16},{...summary,paid:-1},{...summary,delivered:1.5},{...summary,completedAmountInCents:0},{...zero,completedAmountInCents:1},{...summary,completedAmountInCents:9007199254740992},{...zero,total:Number.MAX_SAFE_INTEGER,pendingPayment:Number.MAX_SAFE_INTEGER,paid:1},{...summary,completedAmountInCents:99999999*12+1}])assert(!utils.validOrderSummary(value));
+assert.equal(utils.formatOrderMoney(0),'0.00');assert.equal(utils.formatOrderMoney(3501),'35.01');assert.equal(utils.formatOrderMoney(Number.MAX_SAFE_INTEGER),'90071992547409.91');for(const x of [-1,NaN,1.5,'10'])assert.throws(()=>utils.formatOrderMoney(x));
+function row(id,status='COMPLETED'){
+ const paid=['PAID','DELIVERED','COMPLETED'].includes(status),delivered=['DELIVERED','COMPLETED'].includes(status);
+ return{id,productId:id+100,productTitleSnapshot:'订单统计教材',priceInCentsSnapshot:3500,productVersionSnapshot:0,buyer:{id:2,nickname:'买家'},seller:{id:1,nickname:'卖家'},status,createdAt:'2026-10-18T10:00:00',paymentDueAt:'2026-10-18T10:15:00',paidAt:paid?'2026-10-18T10:01:00':null,paymentKind:paid?'SIMULATED':null,deliveredAt:delivered?'2026-10-18T10:20:00':null,completedAt:status==='COMPLETED'?'2026-10-18T10:30:00':null,cancelledAt:status==='CANCELLED'?'2026-10-18T10:02:00':null,closedAt:status==='CLOSED_TIMEOUT'?'2026-10-18T10:16:00':null};
+}
+function pageData(role='BUYER',status='ALL',requested=1,s=summary){const total=utils.orderSummaryCount(s,status),totalPages=Math.max(1,Math.ceil(total/10)),page=Math.min(requested,totalPages),count=Math.min(10,Math.max(0,total-(page-1)*10));return{role,status,total,totalPages,page,size:10,summary:s,items:Array.from({length:count},(_,n)=>row((page-1)*10+n+1,status==='ALL'?'COMPLETED':status))};}
+let response=pageData('BUYER','COMPLETED',2),requests=[];
+const api=new Function('request',...Object.keys(utils),strip(read('api/order.js'))+';return{getOrders};')(async q=>{requests.push(q);return response},...Object.values(utils));
+await api.getOrders('BUYER',2,'COMPLETED');assert.deepEqual(requests[0],{path:'/api/orders?role=BUYER&page=2&size=10&status=COMPLETED',auth:true});
+await api.getOrders('BUYER',99,'COMPLETED');
+for(const value of ['paid','UNKNOWN',null,'ALL '])await assert.rejects(api.getOrders('BUYER',1,value));
+for(const bad of [{...response,status:'ALL'},{...response,total:17},{...response,summary:{...summary,total:16}},{...response,items:[row(11,'PAID'),row(12)]},{...response,items:[row(11),row(11)]},{...response,page:1},{...response,summary:{...summary,completedAmountInCents:1}}]){const original=response;response=bad;await assert.rejects(api.getOrders('BUYER',2,'COMPLETED'));response=original;}
+response=pageData('BUYER','COMPLETED',1,zero);assert.equal((await api.getOrders('BUYER',1,'COMPLETED')).total,0);
+const ref=value=>({value}),computed=get=>({get value(){return get()}}),flush=()=>new Promise(r=>setImmediate(r));
+function model(){let show,hide,unload,token='A';const user=ref({id:2}),watchers=[],calls=[],mock={get:async(role,page,status)=>pageData(role,status,page)};
+ const env={ref,computed,watch:(g,cb)=>watchers.push(cb),onShow:cb=>show=cb,onHide:cb=>hide=cb,onUnload:cb=>unload=cb,currentUser:user,getToken:()=>token,getOrders:async(...args)=>{calls.push(args);return mock.get(...args)},...Object.fromEntries(['orderPath','orderStatus','orderFilters','orderSummaryCount','formatOrderMoney'].map(k=>[k,utils[k]])),uni:{navigateTo:o=>calls.push(['open',o.url]),reLaunch:o=>calls.push(['home',o.url])}};
+ const state=new Function(...Object.keys(env),strip(parse(read('pages/order/list.vue')).descriptor.scriptSetup.content)+';return{load,chooseStatus,open,items,role,status,page,total,totalPages,summary,busy,error,filterIndex};')(...Object.values(env));show();return{state,mock,calls,show,hide,unload,switchUser:()=>{user.value={id:9};token='B';watchers[0]()},user};
+}
+let f=model();await flush();assert.deepEqual(f.calls[0],['BUYER',1,'ALL']);assert.equal(f.state.summary.value.total,17);
+f.state.chooseStatus({detail:{value:'4'}});await flush();assert.equal(f.state.status.value,'COMPLETED');assert.equal(f.state.total.value,12);assert.equal(f.state.summary.value.total,17);assert.equal(f.state.page.value,1);assert.equal(f.state.filterIndex.value,4);
+await f.state.load('BUYER',2,'COMPLETED');assert.equal(f.state.items.value.length,2);assert.equal(f.state.summary.value.total,17);
+f.mock.get=async()=>{throw Error('筛选断网')};const old=f.state.items.value;f.state.chooseStatus({detail:{value:'2'}});await flush();assert.equal(f.state.status.value,'COMPLETED');assert.equal(f.state.page.value,2);assert.equal(f.state.items.value,old);assert.equal(f.state.summary.value.total,17);assert.match(f.state.error.value,/上次成功/);
+for(const index of [null,undefined,'',-1,7,1.5,'x']){const count=f.calls.length;f.state.chooseStatus({detail:{value:index}});await flush();assert.equal(f.calls.length,count);}
+f.mock.get=async(role,page,status)=>{const result=pageData(role,status,page);return {...result,items:result.items.map(item=>({...item,seller:{id:2,nickname:'当前卖家'},buyer:{id:9,nickname:'他人'}}))}};await f.state.load('SELLER',1,'COMPLETED');assert.equal(f.state.role.value,'SELLER');assert.deepEqual(f.calls.at(-1),['SELLER',1,'COMPLETED']);
+f=model();await flush();f.mock.get=async()=>{throw Error('切换角色失败')};await f.state.load('SELLER',1,'ALL');assert.equal(f.state.role.value,'BUYER');
+f=model();await flush();let resolve;f.mock.get=()=>new Promise(r=>resolve=r);let op=f.state.load('BUYER',2,'ALL');const count=f.calls.length;f.state.chooseStatus({detail:{value:'4'}});await f.state.load('SELLER',1,'ALL');f.state.open(1);assert.equal(f.calls.length,count);resolve(pageData('BUYER','ALL',2));await op;
+for(const end of ['hide','unload','switchUser']){f=model();await flush();const resolves=[];f.mock.get=()=>new Promise(r=>resolves.push(r));const op=f.state.load('BUYER',2,'ALL');f[end]();resolves[0](pageData('BUYER','ALL',2));await op;assert.equal(f.state.summary.value,null);assert.equal(f.state.items.value.length,0);if(end==='switchUser'){assert.equal(f.state.role.value,'BUYER');assert.equal(f.state.status.value,'ALL');resolves[1](pageData('BUYER','ALL',1,zero));await flush();assert.equal(f.state.summary.value.total,0);}}
+f=model();await flush();f.state.chooseStatus({detail:{value:4}});await flush();f.hide();assert.equal(f.state.summary.value,null);f.show();await flush();assert.deepEqual(f.calls.at(-1),['BUYER',1,'COMPLETED']);
+f=model();await flush();f.state.chooseStatus({detail:{value:4}});await flush();await f.state.load('BUYER',2,'COMPLETED');const changed={...summary,total:16,completed:11,completedAmountInCents:38500};f.mock.get=async(role,page,status)=>pageData(role,status,page,changed);await f.state.load();assert.equal(f.state.total.value,11);assert.equal(f.state.summary.value.completedAmountInCents,38500);
+f=model();await flush();f.mock.get=async()=>{throw Error('读取失败')};f.hide();f.show();await flush();assert.equal(f.state.summary.value,null);assert.match(f.state.error.value,/读取失败/);
+f=model();await flush();f.state.open(999);assert(!f.calls.some(v=>v[0]==='open'));f.state.open(1);assert(f.calls.some(v=>v[0]==='open'));
+console.log('PASS: role-wide six-state summaries, exact integer money and malformed/overflow checks; filtered page API echo/count/content/clamping; success-only role/filter/list/summary commit, failure retention, page1 filter changes, busy/identity/hide/unload guards, return refresh and current-row-only navigation.');
