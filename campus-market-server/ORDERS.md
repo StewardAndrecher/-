@@ -53,3 +53,8 @@
 ## 第73课：订单进度时间线
 
 新增参与者私有的 `GET /api/orders/{id}/timeline`。状态变化与操作记录同事务保存，重复操作不重复记；历史订单仅补状态快照。详见 ORDER_EVENTS.md。
+
+
+## 第74课：MQ超时提醒
+
+新增RabbitMQ、事务Outbox及TTL/DLX延迟关闭。订单规则与接口不变，原扫描补偿保留。详见 [MQ.md](MQ.md)。

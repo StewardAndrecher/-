@@ -1,89 +1,97 @@
 {
-  "snapshot": "lesson73",
-  "verifiedAt": "2026-10-18T15:36:56.296427+08:00",
+  "snapshot": "lesson74",
+  "verifiedAt": "2026-10-18T16:52:22.495209+08:00",
   "backend": {
-    "total": 724,
-    "newTimelineTests": 33,
-    "suites": 48,
+    "total": 758,
+    "newMqTests": 34,
+    "regression": 724,
+    "suites": 50,
     "failures": 0,
     "errors": 0,
-    "skipped": 0
+    "skipped": 0,
+    "verificationPhases": "complete regression plus MQ rerun after correcting only the scheduling test Bean lookup"
   },
-  "frontend": {
-    "groups": 47,
-    "allPassed": true
-  },
-  "desktopTests": {
-    "passed": 17,
-    "failed": 0
-  },
-  "builds": [
-    {
-      "platform": "h5",
-      "files": 53,
-      "pages": null,
-      "scopedFiles": 0
+  "mq": {
+    "rabbitmq": "4.3.6",
+    "erlang": "28.5.0.7",
+    "springAmqp": "4.1.1",
+    "javaClient": "5.30.0",
+    "isolatedApi": {
+      "isolated": true,
+      "sweep_disabled": true,
+      "broker_offline_readiness": "UP",
+      "broker_offline_create_http": 201,
+      "outbox_retained_until_recovery": true,
+      "broker_restart_persistent_message_survived": true,
+      "automatic_retry_attempts": 2,
+      "after_recovery_order": "CLOSED_TIMEOUT",
+      "system_timeout_event_once": true,
+      "product_reservation_released": true,
+      "quorum_ttl_dead_letter_topology_verified": true,
+      "api_test_sessions_revoked": true
     },
-    {
-      "platform": "mp-weixin",
-      "files": 150,
-      "pages": 14,
-      "scopedFiles": 28
+    "isolatedWebUi": {
+      "isolated": true,
+      "mq_timeout_and_system_event_visible": true,
+      "test_account_logged_out": true,
+      "sweep_disabled_for_mq_proof": true,
+      "all_qa_sessions_revoked": true
     },
-    {
-      "platform": "app",
-      "files": 32,
-      "pages": 14,
-      "scopedFiles": 0,
-      "installable": false
-    }
-  ],
-  "isolatedOrderChecks": {
-    "isolated": true,
-    "four_events_with_verified_actors": true,
-    "buyer_seller_same_timeline": true,
-    "all_replays_keep_exact_same_events": true,
-    "six_history_snapshots_readable": true,
-    "history_can_continue_to_completion": true,
-    "cancellation_record": true,
-    "scheduled_system_timeout_record": true,
-    "other_user_http": 404,
-    "anonymous_http": 401,
-    "fixture_sessions_logged_out": true
+    "normalTtlMs": 900000,
+    "testTtlMs": 200,
+    "singleNodeOnly": true
   },
-  "isolatedMigration": {
-    "isolated_preexisting_orders": 6,
-    "all_six_states": true,
-    "original_columns_unchanged": true,
-    "only_one_history_snapshot_each": true,
-    "no_fabricated_historical_actor_or_time": true
+  "priorFrontendAndDesktop": {
+    "snapshot": "lesson73",
+    "frontend": {
+      "groups": 47,
+      "allPassed": true
+    },
+    "desktopTests": {
+      "passed": 17,
+      "failed": 0
+    },
+    "builds": [
+      {
+        "platform": "h5",
+        "files": 53,
+        "pages": null,
+        "scopedFiles": 0
+      },
+      {
+        "platform": "mp-weixin",
+        "files": 150,
+        "pages": 14,
+        "scopedFiles": 28
+      },
+      {
+        "platform": "app",
+        "files": 32,
+        "pages": 14,
+        "scopedFiles": 0,
+        "installable": false
+      }
+    ]
   },
   "boundaries": [
-    "模拟付款，无真实扣款或结算",
-    "应用没有事件修改/删除接口；数据库管理员可修改，删除订单会级联删除记录，不是不可篡改审计或合规存证",
-    "旧订单仅补迁移时状态快照，不能还原历史操作人和完整事件",
-    "当前事件最多四步，退款/售后需另行扩展",
-    "微信为编译验收；App仅资源构建，未生成APK/IPA或进行手机验收",
-    "Mac做真实启动、登录和空订单页检查；完整多角色时间线在隔离Web验收"
+    "至少一次投递与幂等业务效果，不是端到端exactly-once",
+    "单节点RabbitMQ，没有验收集群高可用、磁盘丢失恢复或吞吐提升倍数",
+    "TTL从入队开始计时，积压与故障可造成晚到；数据库截止时间和原扫描补偿仍有效",
+    "验收采用隔离库200毫秒TTL和测试订单创建时间回拨，真实规则仍为15分钟",
+    "parking队列需排查，未提供自动重放接口",
+    "原业务仍是模拟付款，没有真实资金支付",
+    "前端源文件未改；本课只重做隔离网页构建与点击验收，未重做微信、App、Mac构建或手机验收"
   ],
-  "repositoryReplay": {
-    "verifiedAt": "2026-10-18T16:00:59.704212+08:00",
-    "backend": {
-      "tests": 724,
-      "suites": 48,
-      "failures": 0,
-      "errors": 0,
-      "skipped": 0
-    },
-    "frontendGroups": 47,
-    "toolTests": 37,
-    "desktopTests": 17,
-    "freshSchemaMigrations": 24,
-    "freshSchemaTables": 13,
-    "noRealDatabaseTouched": true
-  },
-  "toolTests": {
-    "passed": 37,
-    "failed": 0
+  "publicationRecheck": {
+    "verifiedAt": "2026-10-18T17:09:55.114813+08:00",
+    "total": 758,
+    "suites": 50,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "verificationPhases": "Public runner full execution: 749 passing tests; restored the existing required temporary-directory prefix and reran all 9 image tests successfully. Final 50 XML reports: 758 tests, zero failures/errors/skips.",
+    "freshDatabaseMigrations": 25,
+    "freshDatabaseTables": 14,
+    "privateRabbitNodeCleanedUp": true
   }
 }

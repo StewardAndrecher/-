@@ -1,10 +1,12 @@
 # coding: utf-8
 from pathlib import Path
 import subprocess, tempfile, shutil, time, socket, os
+from test_mq_runtime import TestRabbit
 os.chdir(Path(__file__).resolve().parents[1])
 Path('.test-results').mkdir(exist_ok=True)
 root=Path(tempfile.mkdtemp(prefix='campus-lesson24-'))
 server=None
+mq_runtime=None
 redis_process=None
 login_redis_process=None
 mysql=shutil.which('mysql')
@@ -201,6 +203,8 @@ INSERT INTO products(title,description,price_in_cents) VALUES('迁移前教材',
     if r.returncode:raise RuntimeError(r.stderr)
     r=sql('CREATE DATABASE campus_lesson73_verify CHARACTER SET utf8mb4; USE campus_lesson73_verify;\n'+final64_schema)
     if r.returncode:raise RuntimeError(r.stderr)
+    r=sql('CREATE DATABASE campus_lesson74_verify CHARACTER SET utf8mb4; USE campus_lesson74_verify;\n'+final64_schema)
+    if r.returncode:raise RuntimeError(r.stderr)
     for database in sql('SHOW DATABASES').stdout.splitlines():
         if database.startswith('campus_lesson') and database.endswith('_verify'):
             migration=Path('campus-market-server/sql/lesson69-market-orders.sql').read_text().replace('USE campus_market;', 'USE '+database+';')
@@ -213,6 +217,10 @@ INSERT INTO products(title,description,price_in_cents) VALUES('迁移前教材',
     for database in sql('SHOW DATABASES').stdout.splitlines():
         if database.startswith('campus_lesson') and database.endswith('_verify'):
             r=sql(Path('campus-market-server/sql/lesson73-order-events.sql').read_text().replace('USE campus_market;', 'USE '+database+';'))
+            if r.returncode:raise RuntimeError(r.stderr)
+    for database in sql('SHOW DATABASES').stdout.splitlines():
+        if database.startswith('campus_lesson') and database.endswith('_verify'):
+            r=sql(Path('campus-market-server/sql/lesson74-order-timeout-outbox.sql').read_text().replace('USE campus_market;', 'USE '+database+';'))
             if r.returncode:raise RuntimeError(r.stderr)
     # Old intention regression fixtures now exercise the current read model as well.
     for number in range(53,59):
@@ -251,7 +259,11 @@ INSERT INTO products(title,description,price_in_cents) VALUES('迁移前教材',
             with socket.create_connection(('127.0.0.1',login_redis_port),timeout=.3):break
         except OSError:time.sleep(.1)
     else:raise RuntimeError('Isolated login Redis did not start')
+    mq_runtime=TestRabbit(root/'rabbitmq')
+    mq_env=mq_runtime.start()
     env=os.environ.copy()
+    env.update(mq_env)
+    env['ORDER_MQ_ENABLED']='false'
     env['LOGIN_PROTECTION_ENABLED']='false'
     env['LESSON68_REDIS_PORT']=str(login_redis_port)
 
@@ -291,6 +303,7 @@ INSERT INTO products(title,description,price_in_cents) VALUES('迁移前教材',
     env['LESSON62_DB_URL']=env['LESSON24_DB_URL'].replace('campus_lesson24_verify','campus_lesson62_verify')
     env['LESSON63_DB_URL']=env['LESSON24_DB_URL'].replace('campus_lesson24_verify','campus_lesson63_verify')
     env['LESSON66_DB_URL']=env['LESSON24_DB_URL'].replace('campus_lesson24_verify','campus_lesson66_verify')
+    env['LESSON74_DB_URL']=env['LESSON24_DB_URL'].replace('campus_lesson24_verify','campus_lesson74_verify')
     env['LESSON73_DB_URL']=env['LESSON24_DB_URL'].replace('campus_lesson24_verify','campus_lesson73_verify')
     env['LESSON72_DB_URL']=env['LESSON24_DB_URL'].replace('campus_lesson24_verify','campus_lesson72_verify')
     env['LESSON71_DB_URL']=env['LESSON24_DB_URL'].replace('campus_lesson24_verify','campus_lesson71_verify')
@@ -306,7 +319,7 @@ INSERT INTO products(title,description,price_in_cents) VALUES('迁移前教材',
     else:
         test_selection=None
     with open('.test-results/backend.log','w') as log:
-        result=subprocess.run([maven,*(['-o'] if os.environ.get('MAVEN_OFFLINE')=='1' else []),'-q','-f','campus-market-server/pom.xml','-Dtest=OrderTimelineIntegrationTest,OrderQueryIntegrationTest,OrderFulfillmentIntegrationTest,OrderLifecycleIntegrationTest,OrderIntegrationTest,LoginRateLimitIntegrationTest,ProductDetailCacheIntegrationTest,PurchaseIntentReceivedTimeIntegrationTest,PurchaseIntentSortIntegrationTest,PurchaseIntentUnreadSummaryIntegrationTest,PurchaseIntentUnreadFilterIntegrationTest,PurchaseIntentUnreadIntegrationTest,PurchaseIntentMessageReadStateIntegrationTest,PurchaseIntentMessageWithdrawalIntegrationTest,PurchaseIntentMessageIntegrationTest,PurchaseIntentDetailIntegrationTest,PurchaseIntentSummaryIntegrationTest,PurchaseIntentStatusFilterIntegrationTest,PurchaseIntentAcceptanceIntegrationTest,PurchaseIntentCancellationIntegrationTest,PurchaseIntentIntegrationTest,DraftBackupSortIntegrationTest,DraftBackupCategoryIntegrationTest,DraftBackupQueryIntegrationTest,DraftBackupIntegrationTest,ProductOwnerSummaryIntegrationTest,ProductMineSortIntegrationTest,ProductMineSearchIntegrationTest,ProductMineFilterIntegrationTest,ProductSoldIntegrationTest,PublicationIntegrationTest,SellerStoreIntegrationTest,ProductPopularityIntegrationTest,UserProfileIntegrationTest,ProductSortIntegrationTest,CategoryIntegrationTest,HealthEndpointIntegrationTest,DatabaseUnavailableHealthTest,CommentIdempotencyIntegrationTest,CommentIntegrationTest,FavoriteIntegrationTest,ProductVersionIntegrationTest,ProductImageIntegrationTest,ProductLifecycleIntegrationTest,ProductEditIntegrationTest,ProductOwnershipIntegrationTest,PasswordConfigTest,CampusMarketServerApplicationTests','clean','test'],env=env,stdout=log,stderr=subprocess.STDOUT,timeout=1200)
+        result=subprocess.run([maven,*(['-o'] if os.environ.get('MAVEN_OFFLINE')=='1' else []),'-q','-f','campus-market-server/pom.xml','-Dtest=OrderMqIntegrationTest,OrderTimeoutSenderTest,OrderTimelineIntegrationTest,OrderQueryIntegrationTest,OrderFulfillmentIntegrationTest,OrderLifecycleIntegrationTest,OrderIntegrationTest,LoginRateLimitIntegrationTest,ProductDetailCacheIntegrationTest,PurchaseIntentReceivedTimeIntegrationTest,PurchaseIntentSortIntegrationTest,PurchaseIntentUnreadSummaryIntegrationTest,PurchaseIntentUnreadFilterIntegrationTest,PurchaseIntentUnreadIntegrationTest,PurchaseIntentMessageReadStateIntegrationTest,PurchaseIntentMessageWithdrawalIntegrationTest,PurchaseIntentMessageIntegrationTest,PurchaseIntentDetailIntegrationTest,PurchaseIntentSummaryIntegrationTest,PurchaseIntentStatusFilterIntegrationTest,PurchaseIntentAcceptanceIntegrationTest,PurchaseIntentCancellationIntegrationTest,PurchaseIntentIntegrationTest,DraftBackupSortIntegrationTest,DraftBackupCategoryIntegrationTest,DraftBackupQueryIntegrationTest,DraftBackupIntegrationTest,ProductOwnerSummaryIntegrationTest,ProductMineSortIntegrationTest,ProductMineSearchIntegrationTest,ProductMineFilterIntegrationTest,ProductSoldIntegrationTest,PublicationIntegrationTest,SellerStoreIntegrationTest,ProductPopularityIntegrationTest,UserProfileIntegrationTest,ProductSortIntegrationTest,CategoryIntegrationTest,HealthEndpointIntegrationTest,DatabaseUnavailableHealthTest,CommentIdempotencyIntegrationTest,CommentIntegrationTest,FavoriteIntegrationTest,ProductVersionIntegrationTest,ProductImageIntegrationTest,ProductLifecycleIntegrationTest,ProductEditIntegrationTest,ProductOwnershipIntegrationTest,PasswordConfigTest,CampusMarketServerApplicationTests','clean','test'],env=env,stdout=log,stderr=subprocess.STDOUT,timeout=1200)
     report_path=Path('campus-market-server/target/surefire-reports/com.campus.market.product.ProductImageIntegrationTest.txt')
     if not report_path.exists():raise RuntimeError(Path('.test-results/backend.log').read_text()[-5000:])
     report=report_path.read_text()
@@ -330,11 +343,12 @@ INSERT INTO products(title,description,price_in_cents) VALUES('迁移前教材',
     print(Path('campus-market-server/target/surefire-reports/com.campus.market.user.UserProfileIntegrationTest.txt').read_text())
     import xml.etree.ElementTree as ET
     suites=[ET.parse(p).getroot().attrib for p in Path('campus-market-server/target/surefire-reports').glob('TEST-*.xml')]
-    assert sum(int(s['tests']) for s in suites)==724
+    assert sum(int(s['tests']) for s in suites)==758
     assert all(int(s['failures'])==int(s['errors'])==int(s['skipped'])==0 for s in suites)
-    print('PASS: all 724 backend tests, including 33 timeline tests and 691 regression tests; zero failures/errors/skips.')
+    print('PASS: all 758 backend tests, including 34 MQ tests and 724 regression tests; zero failures/errors/skips.')
 
 finally:
+    if mq_runtime is not None:mq_runtime.close()
     if login_redis_process is not None and login_redis_process.poll() is None:
         login_redis_process.terminate()
         try:login_redis_process.wait(timeout=5)

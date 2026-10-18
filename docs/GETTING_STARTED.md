@@ -7,9 +7,10 @@
 - JDK17，Maven或后端目录的Maven Wrapper。
 - MySQL，支持InnoDB与CHECK约束；当前完整验收使用MySQL9.6.0。
 - Redis，提供redis-server/redis-cli；默认使用两个独立实例，详见下文。
+- RabbitMQ及兼容Erlang，当前MQ验收使用RabbitMQ4.3.6 / Erlang28。仅在启用业务MQ时需要；完整后端测试需要RabbitMQ。
 - HBuilderX及Vue3 uni-app编译支持。
 - Node.js22.12+；Electron桌面端使用npm安装锁定依赖。
-- Python3用于仓库验证脚本。完整隔离数据库验证入口支持macOS/Linux，要求mysql、mysqld、mysqldump、mvn和redis-server在PATH（也可设置REDIS_SERVER_BIN）。
+- Python3用于仓库验证脚本。完整隔离数据库验证入口支持macOS/Linux，要求mysql、mysqld、mysqldump、mvn和redis-server在PATH（也可设置REDIS_SERVER_BIN）；完整后端测试还需要rabbitmq-server/rabbitmqctl在PATH，或设置RABBITMQ_SBIN为RabbitMQ的sbin目录。
 
 ```sh
 git clone https://github.com/StewardAndrecher/-.git campus-market
@@ -24,7 +25,7 @@ cd campus-market
 mysql --host=127.0.0.1 --port=3306 --user=root --password < scripts/init-database.sql
 ```
 
-客户端会提示输入你的数据库密码。脚本按顺序整合24份结构SQL，不含业务数据；已有课程数据库应按尚未执行的迁移升级，不能重复初始化。
+客户端会提示输入你的数据库密码。脚本按顺序整合25份结构SQL，不含业务数据；已有课程数据库应按尚未执行的迁移升级，不能重复初始化。
 
 需要逐份查看时，顺序如下：
 
@@ -52,6 +53,7 @@ mysql --host=127.0.0.1 --port=3306 --user=root --password < scripts/init-databas
 22. `lesson70-order-lifecycle.sql`
 23. `lesson71-order-fulfillment.sql`
 24. `lesson73-order-events.sql`
+25. `lesson74-order-timeout-outbox.sql`
 
 已有订单库升级第73课时先停止旧后端、备份并执行新迁移，再启动新后端。建表与历史快照补录是两条SQL，不是整个脚本原子提交，不要重复执行建表。
 
@@ -91,7 +93,23 @@ cd campus-market-server
 
 可检查就绪接口：http://localhost:8080/api/health/readiness 。启动后自行在页面注册账号、发布商品；仓库不提供共享真实账号。可注册两个开发账号，依次验证下单、模拟付款、卖家交付、买家收货和订单时间线；模拟付款不扣款。
 
-## 4. Web与微信小程序
+## 4. RabbitMQ订单超时处理
+
+默认ORDER_MQ_ENABLED=false，数据库超时扫描仍工作。需要启用MQ时，macOS先通过Homebrew安装RabbitMQ（包含兼容Erlang），然后在后端目录执行：
+
+```sh
+python3 scripts/rabbitmq-local.py start
+python3 scripts/rabbitmq-local.py configure-idea
+python3 scripts/rabbitmq-local.py status
+```
+
+configure-idea要求已建立名为CampusMarketServerApplication的Spring Boot运行配置；会备份旧配置并写入本机MQ环境变量，随后在IDEA启动并确认timeout队列消费者连接成功。其他IDE或终端按自己的配置设置ORDER_MQ_ENABLED=true及RABBITMQ_HOST/PORT/USERNAME/PASSWORD/VHOST；不要将密码写入源码。
+
+默认只监听回环，AMQP5672、管理页15672，vhost /campus-market。随机凭证、Cookie及磁盘消息保存在被忽略的data/rabbitmq目录；不要上传。脚本不启用开机服务、不停止未知节点，其他RabbitMQ安装路径可用RABBITMQ_SBIN指定。
+
+已有第73课数据库升级前先停旧后端并备份，再执行lesson74-order-timeout-outbox.sql；只新增Outbox表，不改写历史订单。正常延迟15分钟，队列参数变更应采用新版本前缀并处理旧消息。详细设计及停机操作见[MQ说明](../campus-market-server/MQ.md)。
+
+## 5. Web与微信小程序
 
 用HBuilderX打开campus-market-client，运行到浏览器。Web默认访问http://localhost:8080后端，前端开发服务地址以HBuilderX实际输出为准。前端由HBuilderX管理依赖，没有独立npm开发启动脚本。
 
@@ -99,7 +117,7 @@ cd campus-market-server
 
 manifest.json中的wx0000000000000000与__UNI__CAMPUSDEMO是发布示例，保持编译结构合法；运行微信小程序、DCloud基座或制作正式包时需填写自己的有效AppID。不要填写或提交AppSecret。微信开发者工具运行入口见[小程序说明](../campus-market-client/docs/weixin-development.md)。
 
-## 5. 可校验的三端资源
+## 6. 可校验的三端资源
 
 在仓库根目录运行（macOS默认HBuilderX安装路径已适配）：
 
@@ -109,7 +127,7 @@ node campus-market-client/tools/build.mjs all
 
 其他安装位置通过UNI_COMPILER_HOME指定HBuilderX的uniapp-cli-vite目录。产物位于campus-market-client/unpackage/verified/h5、mp-weixin、app。App目录是资源，不能当作APK/IPA直接安装。
 
-## 6. Mac桌面客户端
+## 7. Mac桌面客户端
 
 先构建Web资源，再运行：
 

@@ -11,6 +11,7 @@
 | HTTP服务 | Java 17、Spring Boot4.1.1、Spring MVC | REST接口、分层服务、统一异常、参数及权限验证 |
 | 数据访问 | JdbcTemplate、MySQL InnoDB（当前本机9.6.0） | 参数绑定、行锁、事务、版本条件更新、唯一键 |
 | 缓存与限流 | Spring Data Redis、Lettuce、Redis Lua | 商品版本缓存；独立登录保护实例、并发占位与TTL |
+| 消息队列 | RabbitMQ 4.3.6、Erlang 28、Spring AMQP 4.1.1 | 事务Outbox、Publisher Confirm / Return、Quorum、TTL / DLX、重试与幂等消费 |
 | 认证 | Spring Security Crypto的BCrypt、随机Bearer会话 | BCrypt强度12；会话摘要持久化、有效期与退出撤销 |
 | 统计与分页 | SQL EXISTS、LEFT JOIN、GROUP BY、MAX/COUNT/SUM | 过滤后排序分页；当前页批量元数据与全局独立统计 |
 | 文件处理 | Spring Multipart、图片格式/尺寸校验、本机文件存储 | 封面最大5MB，限制图片宽高；数据库保存文件元数据 |
@@ -36,6 +37,11 @@ flowchart LR
     JDBC --> DB[(MySQL / InnoDB)]
     Service --> Cache[(Redis 商品缓存 / allkeys-lru)]
     Service --> Guard[(独立Redis 登录保护 / noeviction)]
+    JDBC --> Outbox[(同事务Outbox)]
+    Outbox --> Dispatch[后台租约投递 / Confirm与Return]
+    Dispatch --> MQ[RabbitMQ Quorum / TTL / DLX]
+    MQ --> Consumer[幂等超时检查]
+    Consumer --> Service
     Service --> Files[本机图片目录]
     Shared --> Local[按账号的草稿与浏览记录]
 ```
@@ -53,9 +59,9 @@ App节点表示可编译资源，完整安装包与手机验收仍待完成。El
 
 分页和本页时间在同一只读事务里取得。其他HTTP请求各有查询快照；跨请求同时发生新消息或撤回时，需要刷新更新结果，尚未实现游标分页或实时推送。
 
-## 订单与Redis
+## 订单、Redis与RabbitMQ
 
-订单状态为PENDING_PAYMENT、PAID、DELIVERED、COMPLETED、CANCELLED、CLOSED_TIMEOUT。下单保持商品在售但独立占用，付款标记商品已售；未付款取消或超时释放占用。数据库生成15分钟付款截止时间，定时任务分批关闭；付款/取消请求也检查超时。
+订单状态为PENDING_PAYMENT、PAID、DELIVERED、COMPLETED、CANCELLED、CLOSED_TIMEOUT。下单保持商品在售但独立占用，付款标记商品已售；未付款取消或超时释放占用。数据库生成15分钟付款截止时间，RabbitMQ延迟消息触发检查，原定时任务继续分批补偿；付款/取消请求也检查超时。
 
 状态更新、商品版本变更和操作记录同事务，提交后失效商品缓存。商品→订单固定加锁顺序，条件更新与唯一有效订单约束配合；重放在追加事件前返回。订单详情与记录、筛选列表与角色全量统计分别使用同一REPEATABLE_READ快照。完成金额仅汇总已完成模拟订单的整数分快照，不是账户余额或真实收入。
 
@@ -63,7 +69,11 @@ App节点表示可编译资源，完整安装包与手机验收仍待完成。El
 
 登录保护使用另一个Redis实例（默认6380/noeviction），与6379/allkeys-lru商品缓存分离。Lua原子检查来源与账号额度并占位，密码核验完成后按随机票据处理；限流429附Retry-After，保护服务失败503且不签发新会话。Lua执行错误不保证自动回滚先前脚本写入，未持久化Redis重启会重新开始窗口。
 
-说明：[商品缓存](../campus-market-server/REDIS.md)、[登录保护](../campus-market-server/LOGIN_PROTECTION.md)、[订单生命周期](../campus-market-server/ORDER_LIFECYCLE.md)、[交付/收货](../campus-market-server/ORDER_FULFILLMENT.md)、[统计](../campus-market-server/ORDER_QUERY.md)、[操作记录](../campus-market-server/ORDER_EVENTS.md)。
+下单事务同时写入Outbox；后台短事务用SKIP LOCKED领取并取得30秒租约，再在事务外发送持久消息。收到Publisher ACK且没有Mandatory Return后才标记发送成功；失败退避重试，过期租约可恢复。延迟队列过TTL后经DLX进入处理队列，消费事务提交后容器ACK；失败有限重试后进入parking。MQ投递与数据库扫描使用独立调度线程。
+
+这是至少一次投递加幂等业务效果，不是端到端exactly-once。TTL从入队计时，故障或积压可能使消息晚到，数据库截止时间仍是判断依据。当前只验收单节点，parking需人工排查，未实现自动重放接口。
+
+说明：[RabbitMQ与Outbox](../campus-market-server/MQ.md)、[商品缓存](../campus-market-server/REDIS.md)、[登录保护](../campus-market-server/LOGIN_PROTECTION.md)、[订单生命周期](../campus-market-server/ORDER_LIFECYCLE.md)、[交付/收货](../campus-market-server/ORDER_FULFILLMENT.md)、[统计](../campus-market-server/ORDER_QUERY.md)、[操作记录](../campus-market-server/ORDER_EVENTS.md)。
 
 <a id="source-map"></a>
 
@@ -73,6 +83,8 @@ App节点表示可编译资源，完整安装包与手机验收仍待完成。El
 |---|---|
 | 订单事务、幂等与超时 | [OrderService](../campus-market-server/src/main/java/com/campus/market/order/OrderService.java)、[OrderTimeoutSweep](../campus-market-server/src/main/java/com/campus/market/order/OrderTimeoutSweep.java) |
 | 订单记录与统计 | [OrderRepository](../campus-market-server/src/main/java/com/campus/market/order/OrderRepository.java)、[时间线校验](../campus-market-client/utils/order-timeline.js)、[详情页](../campus-market-client/pages/order/detail.vue) |
+| MQ任务与投递 | [OrderTimeoutOutbox](../campus-market-server/src/main/java/com/campus/market/order/mq/OrderTimeoutOutbox.java)、[Dispatcher](../campus-market-server/src/main/java/com/campus/market/order/mq/OrderTimeoutDispatcher.java)、[Sender](../campus-market-server/src/main/java/com/campus/market/order/mq/OrderTimeoutSender.java) |
+| MQ拓扑与消费 | [OrderMqConfiguration](../campus-market-server/src/main/java/com/campus/market/order/mq/OrderMqConfiguration.java)、[Consumer](../campus-market-server/src/main/java/com/campus/market/order/mq/OrderTimeoutConsumer.java)、[Outbox表](../campus-market-server/sql/lesson74-order-timeout-outbox.sql) |
 | Redis商品缓存 | [ProductDetailCache](../campus-market-server/src/main/java/com/campus/market/product/ProductDetailCache.java) |
 | Redis登录限流 | [登录保护说明与脚本入口](../campus-market-server/LOGIN_PROTECTION.md)、[预占Lua](../campus-market-server/src/main/resources/redis/login-reserve.lua)、[完成Lua](../campus-market-server/src/main/resources/redis/login-finish.lua) |
 | 商品版本冲突与权限 | [ProductService](../campus-market-server/src/main/java/com/campus/market/product/ProductService.java)、[ProductRepository](../campus-market-server/src/main/java/com/campus/market/product/ProductRepository.java) |

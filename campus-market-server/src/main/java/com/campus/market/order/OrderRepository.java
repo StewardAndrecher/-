@@ -22,7 +22,9 @@ public class OrderRepository {
   var key=new GeneratedKeyHolder();
   jdbc.update(c->{var s=c.prepareStatement("INSERT INTO market_orders(product_id,buyer_id,seller_id,request_id,product_title_snapshot,price_in_cents_snapshot,product_version_snapshot,buyer_nickname_snapshot,seller_nickname_snapshot) VALUES(?,?,?,?,?,?,?,?,?)",Statement.RETURN_GENERATED_KEYS);
    s.setLong(1,p.id());s.setLong(2,buyer.id());s.setLong(3,p.seller().id());s.setString(4,requestId);s.setString(5,p.title());s.setLong(6,p.priceInCents());s.setLong(7,p.version());s.setString(8,buyer.nickname());s.setString(9,p.seller().nickname());return s;},key);
-  return key.getKey().longValue();
+  long id=key.getKey().longValue();
+  jdbc.update("INSERT INTO order_timeout_outbox(event_id,order_id) VALUES(?,?)",java.util.UUID.randomUUID().toString(),id);
+  return id;
  }
  int bumpProduct(long id,long version){return jdbc.update("UPDATE products SET version=version+1 WHERE id=? AND version=? AND version<9007199254740991",id,version);}
  int cancel(long id,long buyerId){return jdbc.update("UPDATE market_orders SET status='CANCELLED',cancelled_at=CURRENT_TIMESTAMP(6) WHERE id=? AND buyer_id=? AND status='PENDING_PAYMENT' AND payment_due_at > CURRENT_TIMESTAMP(6)",id,buyerId);}

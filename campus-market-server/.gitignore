@@ -36,3 +36,6 @@ build/
 
 # Local Redis runtime/cache/logs; never commit binaries or runtime data.
 /data/redis/
+
+# RabbitMQ credentials, cookie, message store and node logs stay local.
+/data/rabbitmq/
