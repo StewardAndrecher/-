@@ -12,6 +12,9 @@
 | 数据访问 | JdbcTemplate、MySQL InnoDB（当前本机9.6.0） | 参数绑定、行锁、事务、版本条件更新、唯一键 |
 | 缓存与限流 | Spring Data Redis、Lettuce、Redis Lua | 商品版本缓存；独立登录保护实例、并发占位与TTL |
 | 消息队列 | RabbitMQ 4.3.6、Erlang 28、Spring AMQP 4.1.1 | 事务Outbox、Publisher Confirm / Return、Quorum、TTL / DLX、重试与幂等消费 |
+| 监控告警 | Micrometer、Prometheus、Grafana、Alertmanager、SQLite | MQ/Outbox采集、15面板、8条告警、分组/抑制/恢复通知、本机通知历史 |
+| 文档与日志 | springdoc-openapi 3.1.1、OpenAPI、Swagger UI、SLF4J MDC | 51个业务操作契约、HTTP请求编号与MQ事件关联 |
+| 持续集成 | GitHub Actions、Python标准库 | 73项快速测试、32项工具检查、JUnit归档；843项完整本机回归 |
 | 认证 | Spring Security Crypto的BCrypt、随机Bearer会话 | BCrypt强度12；会话摘要持久化、有效期与退出撤销 |
 | 统计与分页 | SQL EXISTS、LEFT JOIN、GROUP BY、MAX/COUNT/SUM | 过滤后排序分页；当前页批量元数据与全局独立统计 |
 | 文件处理 | Spring Multipart、图片格式/尺寸校验、本机文件存储 | 封面最大5MB，限制图片宽高；数据库保存文件元数据 |
@@ -42,6 +45,11 @@ flowchart LR
     Dispatch --> MQ[RabbitMQ Quorum / TTL / DLX]
     MQ --> Consumer[幂等超时检查]
     Consumer --> Service
+    Service --> Metrics[Micrometer / 独立鉴权采集]
+    Metrics --> Prometheus[Prometheus / 8条告警]
+    Prometheus --> Grafana[Grafana / 15面板]
+    Prometheus --> Alertmanager[Alertmanager / 分组抑制恢复]
+    Alertmanager --> Inbox[本机通知收件箱 / SQLite]
     Service --> Files[本机图片目录]
     Shared --> Local[按账号的草稿与浏览记录]
 ```
@@ -77,10 +85,23 @@ App节点表示可编译资源，完整安装包与手机验收仍待完成。El
 
 <a id="source-map"></a>
 
+## 可观测性、文档与交付
+
+HTTP请求生成或校验32位请求编号，在响应头与错误诊断提示中返回，服务端通过MDC输出摘要。MQ事件继续携带请求/事件标识，投递、确认、消费和幂等结果有结构化日志；不把密码或Bearer凭证写入摘要。
+
+业务指标端点使用独立采集凭证，Prometheus按固定周期采集；Grafana面板区分采集异常与业务值为零。Alertmanager实现分组、重复间隔、同实例下游抑制和恢复通知；当前通知仅发送到本机回环收件箱，不等于已接入邮件或微信。
+
+开发文档默认关闭，只允许本机访问，覆盖51个业务操作；它描述接口契约，不代替身份与资源归属检查。GitHub quick工作流只运行无需中间件的基础测试；完整数据库/MQ回归仍由同一入口的all模式执行。
+
 ## 实现索引
 
 | 设计点 | 可以直接阅读的源码 |
 |---|---|
+| MQ指标与面板 | [监控设计](../campus-market-server/MQ_MONITORING.md)、[面板与规则](../campus-market-server/MQ_DASHBOARD.md)、[Grafana JSON](../campus-market-server/monitoring/grafana-mq-dashboard.json) |
+| 告警通知 | [通知设计](../campus-market-server/MQ_ALERTING.md)、[接收器](../campus-market-server/scripts/alert-receiver.py) |
+| 请求与事件追踪 | [HTTP日志](../campus-market-server/REQUEST_LOGGING.md)、[MQ日志](../campus-market-server/MQ_LOGGING.md) |
+| 接口文档 | [文档指南](../campus-market-server/docs/API_DOCUMENTATION.md) |
+| 自动验收 | [测试入口](../campus-market-server/scripts/test_backend.py)、[CI说明](../campus-market-server/CI.md)、[工作流](../.github/workflows/backend-quick.yml) |
 | 订单事务、幂等与超时 | [OrderService](../campus-market-server/src/main/java/com/campus/market/order/OrderService.java)、[OrderTimeoutSweep](../campus-market-server/src/main/java/com/campus/market/order/OrderTimeoutSweep.java) |
 | 订单记录与统计 | [OrderRepository](../campus-market-server/src/main/java/com/campus/market/order/OrderRepository.java)、[时间线校验](../campus-market-client/utils/order-timeline.js)、[详情页](../campus-market-client/pages/order/detail.vue) |
 | MQ任务与投递 | [OrderTimeoutOutbox](../campus-market-server/src/main/java/com/campus/market/order/mq/OrderTimeoutOutbox.java)、[Dispatcher](../campus-market-server/src/main/java/com/campus/market/order/mq/OrderTimeoutDispatcher.java)、[Sender](../campus-market-server/src/main/java/com/campus/market/order/mq/OrderTimeoutSender.java) |

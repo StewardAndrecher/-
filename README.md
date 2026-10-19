@@ -2,11 +2,13 @@
 
 ![Campus Market 项目概览](docs/assets/project-overview.svg)
 
+[![Backend quick checks](https://github.com/StewardAndrecher/-/actions/workflows/backend-quick.yml/badge.svg)](https://github.com/StewardAndrecher/-/actions/workflows/backend-quick.yml)
+
 **Java 17 / Spring Boot + MySQL + Redis + RabbitMQ + Vue 3 / uni-app + Electron。** 面向校园闲置交易，实现商品管理、买卖沟通、订单流转和进度记录，复用同一套前端业务代码覆盖Web、微信小程序、App资源与Mac桌面端。
 
 [技术栈](#tech-stack) · [工程亮点](#engineering) · [实际截图](#screenshots) · [启动指南](docs/GETTING_STARTED.md) · [架构与源码索引](docs/TECH_STACK.md) · [测试与验收](docs/VERIFICATION.md)
 
-仓库包含截至第74课的完整源码、25份有序建库脚本、测试入口和实际验收截图。业务服务目前在本机运行，GitHub链接用于源码与项目展示。
+仓库包含截至第82课的完整源码、25份有序建库脚本、测试入口和实际验收截图。业务服务目前在本机运行，GitHub链接用于源码与项目展示。
 
 <a id="tech-stack"></a>
 
@@ -21,6 +23,9 @@
 | 消息队列 | RabbitMQ、Spring AMQP、Quorum、TTL / DLX | 订单延迟关闭、事务Outbox、确认与退回检查、租约重试、幂等消费 |
 | 身份认证 | BCrypt、随机Bearer会话、SHA-256摘要 | 密码哈希、会话过期/退出，按当前账号校验资源归属 |
 | 桌面 | Electron 44.7.0、Node.js、Electron Packager | 复用H5，Mac ARM64打包、回环静态服务、窗口和请求权限限制 |
+| 可观测性 | Micrometer、Prometheus、Grafana、Alertmanager | MQ/Outbox指标、15面板、8条告警规则、分组抑制与恢复通知、本机SQLite历史 |
+| 接口与追踪 | springdoc-openapi、Swagger UI、SLF4J MDC | 51个业务操作文档、HTTP请求编号、MQ异步事件关联、轮转日志 |
+| 持续集成 | GitHub Actions、Python标准库 | 73项quick基础测试、32项验收工具检查、JUnit报告归档 |
 | 验证与交付 | JUnit、MockMvc、Mockito、Node Test Runner、Maven、HBuilderX | 临时MySQL/Redis/RabbitMQ集成测试、跨端构建、源码/产物SHA-256清单 |
 
 版本、设计与代码入口见[技术栈详解](docs/TECH_STACK.md)。
@@ -52,6 +57,9 @@
 6. **权限与异步响应保护。** 操作身份由服务端会话确定，私密记录仅参与者可读；前端在账号切换、页面隐藏或卸载后使旧请求失效。写入成功但随后读取失败时保留已确认结果。
 7. **统计与跨端交付。** 状态过滤在SQL分页前执行，角色全量统计和列表共享事务快照；uni-app三端资源与Mac内嵌H5均生成并校验源码/产物哈希。
 
+8. **监控与故障定位。** Prometheus采集独立鉴权指标，Grafana提供15个面板；8条告警配合Alertmanager分组、抑制与恢复通知。HTTP请求编号与MQ事件编号串联投递和消费日志，帮助从异常定位业务操作。
+9. **接口契约与分层验收。** 自动生成51个业务操作文档，开发文档默认关闭并限制本机访问；73项基础测试无需中间件，843项完整回归使用临时服务，CI复用同一验收入口。
+
 [查看架构、实现边界及对应源码](docs/TECH_STACK.md#source-map)。
 
 <a id="screenshots"></a>
@@ -59,6 +67,16 @@
 ## 实际截图
 
 截图来自本机或隔离验收环境，订单、账号与留言用于开发演示。范围见[验收说明](docs/VERIFICATION.md)。
+
+### MQ监控面板与自动接口文档
+
+![Grafana MQ运行监控](docs/assets/mq-grafana.png)
+
+15个面板展示采集状态、Outbox等待、队列与消费者等；8条告警规则覆盖故障场景。截图来自第76课本机验收。
+
+![Swagger商品查询真实返回200](docs/assets/swagger-products.png)
+
+第80课通过Swagger调用商品接口返回200；生成文档覆盖51个业务操作，健康和运维接口不混入业务文档。
 
 ### RabbitMQ故障恢复后的订单超时关闭
 
@@ -105,16 +123,18 @@
 
 | 验证 | 当前通过记录 | 仓库复查入口 |
 |---|---:|---|
-| 后端集成与回归 | 758项，50个测试类（新增34项MQ）；0失败/错误/跳过 | `python3 scripts/test_backend.py` |
+| 后端集成与回归 | 843项，59个测试类；0失败/错误/跳过 | `python3 scripts/test_backend.py` |
+| 快速Java检查 | 73项，8类；不启动中间件 | `python3 scripts/test_backend.py --suite quick` |
+| 后端验收工具 | 32项 | 后端目录 `python3 -B -m unittest discover -s scripts/tests -v` |
 | 前端状态、接口与平台 | 47组 | `python3 scripts/test_frontend.py` |
-| 构建、存储与网络工具 | 37项 | 上述前端入口一并执行 |
+| 构建、存储、网络与请求编号工具 | 50项 | 上述前端入口一并执行 |
 | 桌面运行规则 | 17项 | 桌面目录安装依赖后 `npm test` |
 
-后端验证创建临时MySQL、两个临时Redis和独立RabbitMQ节点；本课后端与MQ网页重新验收，前端47组及跨端构建记录来自源码未改的第73课。前端复查入口可重新构建三端资源。环境和验证边界见[测试说明](docs/VERIFICATION.md)。
+后端验证创建临时MySQL、两个临时Redis和独立RabbitMQ节点；第82课单次完整回归843项全部通过，quick实际执行73项。本次发布副本重新通过47组前端行为、50项前端工具和17项桌面规则检查，并重新构建Web、微信和App资源。前端复查入口可重新构建三端资源。环境和验证边界见[测试说明](docs/VERIFICATION.md)。
 
 | 终端 | 已验证范围 |
 |---|---|
-| Web | 当前业务HTTP和浏览器操作；最新MQ超时关闭、订单四步时间线、历史快照与统计 |
+| Web | 业务HTTP和浏览器操作；订单时间线、MQ超时、HTTP错误请求编号和Swagger调用，详见分课证据 |
 | 微信小程序 | 当前源码编译、14页和组件结构检查；历史页面有开发者工具验收 |
 | Mac ARM64 | 新包实际启动/登录/空订单页检查，53个Web资源与源码构建一致 |
 | Android / iOS | App资源编译通过；尚未完成APK/IPA与手机验收 |
@@ -132,5 +152,7 @@ docs/                    架构、启动指南、验收与实际截图
 当前尚未接入真实支付、退款售后、WebSocket实时推送、线上部署或大规模性能压测。操作记录为应用层只追加，数据库管理员仍可修改，删除订单会级联删除记录；未将其描述为不可篡改存证。
 
 消息采用至少一次投递与幂等业务效果；当前RabbitMQ为本机单节点，未验收集群高可用，也没有吞吐提升倍数声明。
+
+GitHub Actions在push、pull_request或手动触发时运行快速检查；当前云端状态见上方徽章及[Actions页面](https://github.com/StewardAndrecher/-/actions)。快速检查不能替代完整集成回归。
 
 源码和结构SQL公开；真实数据库、会话、MQ凭证/Cookie/磁盘消息、图片上传目录、IDE配置、依赖、运行日志及安装包保留本机。

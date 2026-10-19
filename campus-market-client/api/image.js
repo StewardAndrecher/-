@@ -1,3 +1,4 @@
+import { responseRequestId } from '@/utils/request-reference.mjs'
 import { API_BASE_URL, ApiError } from './request.js'
 import { SERVER_CONFIG } from '@/config/server.js'
 import { getToken, clearSession } from '@/utils/session.js'
@@ -24,10 +25,10 @@ export function uploadImage(filePath) {
           if (!data || !ID_PATTERN.test(data.id) || data.url !== `/api/images/${data.id}` ||
               !Number.isSafeInteger(data.width) || data.width < 1 || data.width > 2000 ||
               !Number.isSafeInteger(data.height) || data.height < 1 || data.height > 2000) {
-            reject(new ApiError('上传结果格式不正确', status)); return
+            reject(new ApiError('上传结果格式不正确', status, '', responseRequestId(res.header))); return
           }
           resolve(data)
-        } else reject(new ApiError(data?.message || `上传失败：HTTP ${status}`, status))
+        } else reject(new ApiError(data?.message || `上传失败：HTTP ${status}`, status, '', responseRequestId(res.header)))
       },
       fail: () => reject(new ApiError('图片上传未收到结果，请重新选择后重试', 0))
     })

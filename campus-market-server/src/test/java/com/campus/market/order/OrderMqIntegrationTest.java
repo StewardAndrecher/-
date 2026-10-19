@@ -62,6 +62,34 @@ class OrderMqIntegrationTest {
 
 
 
+ java.util.List<ch.qos.logback.classic.spi.ILoggingEvent> captureCommitLogs(Runnable operation) {
+  var logger=(ch.qos.logback.classic.Logger)org.slf4j.LoggerFactory.getLogger(OrderMqLog.class);
+  var entries=new java.util.ArrayList<ch.qos.logback.classic.spi.ILoggingEvent>();
+  var appender=new ch.qos.logback.core.AppenderBase<ch.qos.logback.classic.spi.ILoggingEvent>() {
+   protected void append(ch.qos.logback.classic.spi.ILoggingEvent event){event.prepareForDeferredProcessing();entries.add(event);}
+  };
+  appender.start();logger.addAppender(appender);
+  try {operation.run();return entries;}finally{logger.detachAppender(appender);appender.stop();org.slf4j.MDC.remove("requestId");}
+ }
+ @Test void committedOutboxLogLinksHttpContextOnlyAfterRealTransactionCompletes(){
+  String request="a".repeat(32);long[] id={0};
+  var logs=captureCommitLogs(()->{
+   org.slf4j.MDC.put("requestId",request);
+   var tx=new TransactionTemplate(transactions);
+   tx.executeWithoutResult(status->{id[0]=service.create(product,new Create(0L,uuid()),buyerToken).order().id();});
+  });
+  var committed=logs.stream().filter(e->e.getFormattedMessage().contains("stage=outbox_committed")).toList();
+  assertEquals(1,committed.size());assertEquals(event(id[0]),committed.get(0).getMDCPropertyMap().get("eventId"));
+  assertTrue(committed.get(0).getFormattedMessage().contains("originRequestId="+request));
+ }
+ @Test void realOuterRollbackDoesNotEmitCommittedOutboxLog(){
+  var logs=captureCommitLogs(()->{
+   var tx=new TransactionTemplate(transactions);
+   tx.executeWithoutResult(status->{service.create(product,new Create(0L,uuid()),buyerToken);status.setRollbackOnly();});
+  });
+  assertTrue(logs.stream().noneMatch(e->e.getFormattedMessage().contains("stage=outbox_committed")));
+  assertEquals(0,count());assertEquals(0,pending());
+ }
  @Test void mqSchedulingExistsWithoutSweepAndUsesSeparateScheduler(){assertNotSame(context.getBean("taskScheduler"),context.getBean("orderMqTaskScheduler"));assertNotNull(context.getBean(org.springframework.scheduling.annotation.ScheduledAnnotationBeanPostProcessor.class));}
  @AfterEach void stop(){listeners.stop();}
  void waitFor(BooleanSupplier condition)throws Exception{long end=System.nanoTime()+Duration.ofSeconds(10).toNanos();while(System.nanoTime()<end){if(condition.getAsBoolean())return;Thread.sleep(50);}fail("MQ异步结果未在时限内出现");}

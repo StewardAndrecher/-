@@ -10,7 +10,7 @@ import static org.mockito.Mockito.*;
 class OrderTimeoutSenderTest {
  final RabbitTemplate rabbit=mock(RabbitTemplate.class);
  final OrderMqSettings settings=new OrderMqSettings("campus.order.unit74",200,100);
- final OrderTimeoutSender sender=new OrderTimeoutSender(rabbit,settings);
+ final OrderTimeoutSender sender=new OrderTimeoutSender(rabbit,settings,new OrderMqMetrics(new io.micrometer.core.instrument.simple.SimpleMeterRegistry()));
  final OrderTimeoutOutbox.Job job=new OrderTimeoutOutbox.Job("00000000-0000-4000-8000-000000000001",7L,"lease",1);
  void reply(boolean ack,boolean returned){doAnswer(call->{CorrelationData data=call.getArgument(3);if(returned)data.setReturned(new ReturnedMessage(call.getArgument(2),312,"NO_ROUTE",settings.delayExchange(),"delay"));data.getFuture().complete(new CorrelationData.Confirm(ack,null));return null;}).when(rabbit).send(anyString(),anyString(),any(Message.class),any(CorrelationData.class));}
  @Test void confirmedAndRoutedIsSuccess()throws Exception{reply(true,false);sender.send(job);verify(rabbit).send(eq(settings.delayExchange()),eq("delay"),any(Message.class),any(CorrelationData.class));}

@@ -2,34 +2,67 @@
 
 [项目首页](../README.md) · [启动指南](GETTING_STARTED.md) · [技术栈](TECH_STACK.md)
 
-## 当前记录（第74课）
+## 当前记录（第82课）
 
-| 范围 | 结果 |
-|---|---|
-| 后端 | 758项 / 50个测试类（34项MQ＋724项回归），0失败、0错误、0跳过 |
-| MQ故障与网页 | 断线下单、恢复重试、持久消息重启与超时关闭通过 |
-| 前端行为与平台 | 47组通过（第73课记录，本课源码未改） |
-| 构建/存储/网络工具 | 37项通过 |
-| 桌面规则 | 17项通过（第73课记录，本课源码未改） |
-| Web | 53个资源 |
-| 微信 | 150个资源 / 14页 / 28个作用域文件 |
-| App | 32个资源 / 14页；installable=false |
+| 范围 | 已通过记录 | 证据版本 |
+|---|---|---|
+| 完整Java回归 | 843项、59类；0失败、0错误、0跳过 | 第82课单次完整隔离运行，macOS ARM64 |
+| quick Java基础测试 | 73项、8类；不启动中间件 | 第82课桌面入口及最小PATH复查 |
+| Python验收工具 | 32项通过 | 第82课 |
+| 工作流配置 | actionlint静态校验通过 | 云端运行状态见Actions |
+| 监控规则 | 17个场景、168条告警断言、2条表达式断言 | 第76/77课 |
+| 告警通知 | 35项检查，含故障、抑制、恢复与持久化 | 第77课本机回环接收器 |
+| 前端行为 | 47组通过 | 本次发布副本重新执行 |
+| 前端工具 | 50项通过 | 本次发布副本重新执行，包含请求编号检查 |
+| 桌面规则 | 17项通过 | 本次发布副本重新执行 |
+| 三端资源 | Web53、微信151、App32；App不可直接安装 | 本次发布副本重新构建 |
 
-[可公开验收摘要](verification-snapshot.json)分别记录第74课MQ结果及第73课前端/构建结果与边界；实际截图在assets目录。测试数量对应本仓库该版本，不代表性能压测。
+[公开验收摘要](verification-snapshot.json)保留各范围的版本来源。测试数量不是性能压测结果；quick覆盖范围小于完整回归。
 
 ## 后端复查
 
-要求macOS/Linux、JDK17、Python3，mysql、mysqld、mysqldump、mvn、redis-server在PATH。可用REDIS_SERVER_BIN指定Redis二进制；rabbitmq-server和rabbitmqctl需在PATH，也可设置RABBITMQ_SBIN指向RabbitMQ sbin目录。MySQL需要支持InnoDB和CHECK，当前验收使用9.6.0；不能使用MariaDB替代而不验证兼容性。
+在仓库根目录运行：
 
 ```sh
-python3 scripts/test_backend.py
+# 快速模式：Python3.9+、JDK17、Maven
+python3 -B scripts/test_backend.py --check --suite quick
+python3 -B scripts/test_backend.py --suite quick
+
+# 完整模式：还需已安装MySQL、Redis、RabbitMQ二进制
+python3 -B scripts/test_backend.py
+
+# 仅文档相关20项集成与基础测试
+python3 -B scripts/test_backend.py --suite docs
+
+# 工具自身检查
+cd campus-market-server
+python3 -B -m unittest discover -s scripts/tests -v
 ```
 
-入口创建全新临时MySQL、明确命名的课程测试库、两个临时Redis及独立RabbitMQ进程，动态分配本机回环端口，不复用真实3306/6379/6380/5672或业务vhost。MQ使用随机节点名、临时磁盘目录、随机凭证和专用课程vhost，不启用管理插件；退出时只停止本次启动的节点。测试需要清理隔离夹具；不要手动将LESSON*_DB_URL指向业务库。结束停止临时进程，输出位于被忽略的.test-results目录。首次Maven可联网下载；依赖已缓存时可设置MAVEN_OFFLINE=1。
+根目录入口转交后端的同一实现；不再维护另一份测试类名单。依赖缓存齐全可加--offline。工具在临时源码副本构建，不清理IDEA的target/classes。完整模式使用临时MySQL、两个Redis和独立MQ节点；不继承真实业务DB/MQ/Spring/JVM注入变量。
 
-第67/68课覆盖缓存命中/失效/故障降级和Lua限流并发/429/503。第69～73课覆盖订单占用、版本与提交幂等、超时、角色权限、交付/收货、统计快照及操作记录。第73课的33项包含记录写失败时业务回滚、并发操作不重复记录、历史快照继续推进和一致读取。
+JUnit报告必须完整且无失败、错误、跳过；零用例或缺少报告不能通过。故意失败和SIGTERM中断的清理分支已实际验证。临时服务退出后保存私有summary、Maven日志与JUnit；启动失败时额外保留指定启动日志末尾。kill -9或断电不保证Python能够清理。
 
-第74课新增28项真实MySQL/RabbitMQ集成测试及6项发送测试，覆盖事务回滚、并发领取、租约恢复、Confirm/Return、TTL/DLX、异步消费、重复消息、已付款不误关、失败重试与parking。公开发布复查中749项通过，图片测试因临时目录前缀未满足既有安全校验而未执行；恢复约定前缀后9项图片测试复验通过。最终50份报告共758项，失败、错误、跳过均0；属于完整回归加针对性复验，未宣称单次完整运行成功。
+第82课首次完整尝试在临时MQ启动阶段退出；独立探测与最终完整回归成功，原启动退出原因未复现。本次公开版本的225份Java/SQL/资源/Maven构建输入与最终843项通过记录一致。原13张业务表、图片、后端进程和195个编译文件未变。
+
+完整机制与运行限制见[后端TESTING](../campus-market-server/TESTING.md)。本机完整回归为macOS实测，Linux quick的云端结果独立记录。
+
+## GitHub Actions
+
+根目录[backend-quick.yml](../.github/workflows/backend-quick.yml)在push、pull_request或手动触发时运行：Ubuntu24.04、Temurin17、32项Python检查与73项quick测试。使用只读仓库权限和固定Action提交SHA，报告保留7天。它不运行完整中间件回归，不部署业务，也未自动配置分支保护。
+
+[查看当前云端运行与日志](https://github.com/StewardAndrecher/-/actions/workflows/backend-quick.yml)。静态校验通过不代表云端首跑通过；每次运行结果以Actions页面和JUnit为准。
+
+## 第75至80课新增证据
+
+- Micrometer与Prometheus：MQ队列、Outbox及消费者指标使用独立采集凭证，采集失败和业务值为零分别处理。
+- Grafana：15个面板；8条规则经17个场景验证。
+- Alertmanager：分组、同实例下游抑制、重复间隔与恢复通知；接收器SQLite重启后保留历史。只验收本机通知，不宣称已接入外部消息渠道。
+- HTTP追踪：真实500响应显示请求编号，服务端日志可按编号定位；前端请求和图片上传都保留诊断编号。
+- MQ追踪：请求与事件标识贯穿Outbox投递、确认、消费和幂等结果，不改变消息架构或宣称exactly-once。
+- springdoc：51个业务操作、契约与默认关闭测试通过；Swagger真实调用商品接口200；健康与运维采集接口不混入业务文档。
+
+以下保留此前业务页面与跨端证据，版本来源分别注明。
 
 ## 前端与桌面复查
 
@@ -42,7 +75,7 @@ npm ci
 npm test
 ```
 
-前端入口预处理平台分支、重建Web/微信/App资源，执行47组检查及37项工具测试。桌面17项验证静态服务、路径、Host、资源一致性和窗口规则；打包与启动另见启动指南。
+前端入口预处理平台分支、重建Web/微信/App资源，执行47组检查及50项工具测试。桌面17项验证静态服务、路径、Host、资源一致性和窗口规则；打包与启动另见启动指南。
 
 ## 页面与迁移证据
 

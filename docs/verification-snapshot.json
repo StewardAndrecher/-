@@ -1,97 +1,92 @@
 {
-  "snapshot": "lesson74",
-  "verifiedAt": "2026-10-18T16:52:22.495209+08:00",
+  "snapshot": "lesson82",
+  "verifiedAt": "2026-10-19",
   "backend": {
-    "total": 758,
-    "newMqTests": 34,
-    "regression": 724,
-    "suites": 50,
+    "total": 843,
+    "suites": 59,
     "failures": 0,
     "errors": 0,
     "skipped": 0,
-    "verificationPhases": "complete regression plus MQ rerun after correcting only the scheduling test Bean lookup"
+    "origin": "lesson82 single full isolated run on macOS ARM64",
+    "durationSeconds": 600.98
   },
-  "mq": {
-    "rabbitmq": "4.3.6",
-    "erlang": "28.5.0.7",
-    "springAmqp": "4.1.1",
-    "javaClient": "5.30.0",
-    "isolatedApi": {
-      "isolated": true,
-      "sweep_disabled": true,
-      "broker_offline_readiness": "UP",
-      "broker_offline_create_http": 201,
-      "outbox_retained_until_recovery": true,
-      "broker_restart_persistent_message_survived": true,
-      "automatic_retry_attempts": 2,
-      "after_recovery_order": "CLOSED_TIMEOUT",
-      "system_timeout_event_once": true,
-      "product_reservation_released": true,
-      "quorum_ttl_dead_letter_topology_verified": true,
-      "api_test_sessions_revoked": true
+  "quick": {
+    "total": 73,
+    "suites": 8,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "middlewareStarted": false
+  },
+  "backendToolTests": 32,
+  "monitoring": {
+    "snapshot": "lesson76/77",
+    "grafanaPanels": 15,
+    "alertRules": 8,
+    "ruleScenarios": 17,
+    "ruleAssertions": 168,
+    "expressionAssertions": 2,
+    "notificationChecks": 35,
+    "scope": "local loopback inbox; no external messaging"
+  },
+  "apiDocs": {
+    "snapshot": "lesson80",
+    "businessOperations": 51,
+    "defaultEnabled": false,
+    "localOnly": true
+  },
+  "frontend": {
+    "behaviorGroups": 47,
+    "behaviorEvidence": "lesson73",
+    "toolTests": 50,
+    "toolAndBuildEvidence": "lesson78",
+    "publicationRecheck": {
+      "behaviorGroups": 47,
+      "toolTests": 50,
+      "desktopRuleTests": 17,
+      "allThreeBuilds": true,
+      "date": "2026-10-19"
+    }
+  },
+  "desktopTests": 17,
+  "builds": [
+    {
+      "platform": "h5",
+      "files": 53,
+      "pages": null,
+      "scopedFiles": 0
     },
-    "isolatedWebUi": {
-      "isolated": true,
-      "mq_timeout_and_system_event_visible": true,
-      "test_account_logged_out": true,
-      "sweep_disabled_for_mq_proof": true,
-      "all_qa_sessions_revoked": true
+    {
+      "platform": "mp-weixin",
+      "files": 151,
+      "pages": 14,
+      "scopedFiles": 28
     },
+    {
+      "platform": "app",
+      "files": 32,
+      "pages": 14,
+      "scopedFiles": 0,
+      "installable": false
+    }
+  ],
+  "priorMqEvidence": {
+    "snapshot": "lesson74",
     "normalTtlMs": 900000,
     "testTtlMs": 200,
     "singleNodeOnly": true
   },
-  "priorFrontendAndDesktop": {
-    "snapshot": "lesson73",
-    "frontend": {
-      "groups": 47,
-      "allPassed": true
-    },
-    "desktopTests": {
-      "passed": 17,
-      "failed": 0
-    },
-    "builds": [
-      {
-        "platform": "h5",
-        "files": 53,
-        "pages": null,
-        "scopedFiles": 0
-      },
-      {
-        "platform": "mp-weixin",
-        "files": 150,
-        "pages": 14,
-        "scopedFiles": 28
-      },
-      {
-        "platform": "app",
-        "files": 32,
-        "pages": 14,
-        "scopedFiles": 0,
-        "installable": false
-      }
-    ]
+  "githubActions": {
+    "workflow": ".github/workflows/backend-quick.yml",
+    "localStaticValidation": "actionlint PASS",
+    "cloudRun": "See repository Actions page for each published commit"
   },
   "boundaries": [
-    "至少一次投递与幂等业务效果，不是端到端exactly-once",
-    "单节点RabbitMQ，没有验收集群高可用、磁盘丢失恢复或吞吐提升倍数",
-    "TTL从入队开始计时，积压与故障可造成晚到；数据库截止时间和原扫描补偿仍有效",
-    "验收采用隔离库200毫秒TTL和测试订单创建时间回拨，真实规则仍为15分钟",
-    "parking队列需排查，未提供自动重放接口",
-    "原业务仍是模拟付款，没有真实资金支付",
-    "前端源文件未改；本课只重做隔离网页构建与点击验收，未重做微信、App、Mac构建或手机验收"
-  ],
-  "publicationRecheck": {
-    "verifiedAt": "2026-10-18T17:09:55.114813+08:00",
-    "total": 758,
-    "suites": 50,
-    "failures": 0,
-    "errors": 0,
-    "skipped": 0,
-    "verificationPhases": "Public runner full execution: 749 passing tests; restored the existing required temporary-directory prefix and reran all 9 image tests successfully. Final 50 XML reports: 758 tests, zero failures/errors/skips.",
-    "freshDatabaseMigrations": 25,
-    "freshDatabaseTables": 14,
-    "privateRabbitNodeCleanedUp": true
-  }
+    "quick cannot replace full integration regression",
+    "macOS full regression; Linux quick cloud status tracked separately",
+    "simulated payments only",
+    "App resources only; no APK/IPA or phone acceptance",
+    "single RabbitMQ node; no cluster HA or throughput claims",
+    "no public application deployment"
+  ]
 }

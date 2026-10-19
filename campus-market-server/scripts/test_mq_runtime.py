@@ -3,14 +3,15 @@ from pathlib import Path
 import os,secrets,shutil,socket,subprocess,time,signal
 
 class TestRabbit:
-    def __init__(self, directory):
+    def __init__(self, directory, env=None):
         self.root=Path(directory);self.root.mkdir(mode=0o700)
         self.node='campus_verify_'+secrets.token_hex(6)+'@localhost'
         self.user='campus_verify';self.password=secrets.token_urlsafe(32)
         self.vhost='/campus-lesson74-verify';self.process=None
-        self.sbin=Path(os.environ['RABBITMQ_SBIN']) if os.environ.get('RABBITMQ_SBIN') else None
-        self.server=str(self.sbin/'rabbitmq-server') if self.sbin else shutil.which('rabbitmq-server')
-        self.ctl=str(self.sbin/'rabbitmqctl') if self.sbin else shutil.which('rabbitmqctl')
+        base_env=os.environ if env is None else env
+        self.sbin=Path(base_env['RABBITMQ_SBIN']) if base_env.get('RABBITMQ_SBIN') else None
+        self.server=str(self.sbin/'rabbitmq-server') if self.sbin else shutil.which('rabbitmq-server',path=base_env.get('PATH',os.defpath))
+        self.ctl=str(self.sbin/'rabbitmqctl') if self.sbin else shutil.which('rabbitmqctl',path=base_env.get('PATH',os.defpath))
         if not self.server or not self.ctl:raise RuntimeError('rabbitmq-server and rabbitmqctl must be on PATH, or set RABBITMQ_SBIN')
         sockets=[]
         try:
@@ -34,7 +35,7 @@ default_permissions.read = ^campus[.]order[.].*
 ''');config.chmod(0o600)
         (self.root/'enabled_plugins').write_text('[].\n')
         (self.root/'env.conf').touch()
-        self.env={key:value for key,value in os.environ.items() if not key.startswith(('RABBITMQ_','ERL_','ERL_AFLAGS'))}
+        self.env={key:value for key,value in (os.environ if env is None else env).items() if not key.startswith(('RABBITMQ_','ERL_','ERL_AFLAGS'))}
         self.env.update(RABBITMQ_CONF_ENV_FILE=str(self.root/'env.conf'),RABBITMQ_CONFIG_FILE=str(self.root/'rabbitmq'),RABBITMQ_MNESIA_BASE=str(self.root/'mnesia'),RABBITMQ_LOG_BASE=str(self.root/'logs'),RABBITMQ_PID_FILE=str(self.root/'rabbitmq.pid'),RABBITMQ_ENABLED_PLUGINS_FILE=str(self.root/'enabled_plugins'),RABBITMQ_NODENAME=self.node,RABBITMQ_ERLANG_COOKIE=secrets.token_hex(32),ERL_EPMD_ADDRESS='127.0.0.1',RABBITMQ_DIST_PORT=str(self.dist),RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS='-kernel inet_dist_use_interface {127,0,0,1} +S 2:2 +A 4',RABBITMQ_CTL_ERL_ARGS='+S 1:1 +A 2')
 
     def start(self):

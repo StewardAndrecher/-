@@ -1,4 +1,3 @@
-HELP.md
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
@@ -39,3 +38,23 @@ build/
 
 # RabbitMQ credentials, cookie, message store and node logs stay local.
 /data/rabbitmq/
+
+# 第75课：监控凭证、采集配置与本机时序数据
+/data/monitoring/
+
+# 第76课：Grafana账号、会话数据库和本机配置
+/data/grafana/
+
+# 本机告警凭证、官方二进制、通知与去重记录
+data/alerting/
+
+# 请求日志与历史轮转文件仅保留在本机
+/data/logs/
+
+# 本机接口文档运行配置备份（可能包含原运行凭证）
+/data/api-docs/
+
+# 隔离测试日志和JUnit报告仅保留本机
+/data/test-results/
+__pycache__/
+*.pyc

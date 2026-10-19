@@ -1,0 +1,22 @@
+# Prometheus是否成功采集应用
+up{job="campus-market"}
+
+# Broker查询、数据库采样与样本年龄
+campus_order_mq_broker_up
+campus_order_outbox_poll_up
+campus_order_mq_sample_age_seconds
+campus_order_outbox_sample_age_seconds
+
+# Outbox积压与最老等待时间
+campus_order_outbox_pending
+campus_order_outbox_oldest_seconds
+
+# 消费失败保留队列与工作消费者
+campus_order_mq_queue_ready{queue="parking"}
+campus_order_mq_queue_consumers{queue="timeout"}
+
+# 最近5分钟发送失败速率；刚启动/没有足够样本时可能没有结果
+sum(rate(campus_order_mq_publish_total{result="failed"}[5m]))
+
+# 最近5分钟的平均消费耗时（秒）；没有调用时分母为零，结果NaN
+sum(rate(campus_order_mq_consume_duration_seconds_sum[5m])) / sum(rate(campus_order_mq_consume_duration_seconds_count[5m]))

@@ -1,0 +1,12 @@
+apiVersion: 1
+providers:
+  - name: campus-market-mq
+    orgId: 1
+    folder: 校园集市
+    folderUid: campus-market
+    type: file
+    disableDeletion: false
+    allowUiUpdates: false
+    updateIntervalSeconds: 30
+    options:
+      path: $CAMPUS_GRAFANA_DASHBOARDS

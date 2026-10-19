@@ -142,6 +142,32 @@ npm start
 
 后端仍需单独启动。桌面本地静态服务固定127.0.0.1:5188，业务访问本机8080。打包使用npm run package；默认拒绝覆盖同名输出，保留旧包后再打包。当前实际验证的是Mac ARM64，未验证Windows/Linux安装包，未配置签名、公证和自动更新。
 
+## 8. 监控、告警与接口文档
+
+这些都是可选开发工具，先确认后端和MQ正常。监控需要本机Prometheus，面板需要Grafana，通知链路需要Alertmanager；安装和启动入口、版本及端口见下方项目指南。默认回环访问，不会自动部署公网服务。
+
+- [指标与Prometheus](../campus-market-server/MQ_MONITORING.md)
+- [Grafana与告警规则](../campus-market-server/MQ_DASHBOARD.md)
+- [Alertmanager与本机通知收件箱](../campus-market-server/MQ_ALERTING.md)
+- [HTTP请求日志](../campus-market-server/REQUEST_LOGGING.md)、[MQ事件日志](../campus-market-server/MQ_LOGGING.md)
+- [自动接口文档](../campus-market-server/docs/API_DOCUMENTATION.md)：开发环境设置API_DOCS_ENABLED=true后重启，通过http://localhost:8080/docs.html访问；默认关闭、只允许本机。
+
+凭证与日志均保存在被忽略的后端data目录，不需要上传。监控、文档开关与IDEA配置分别管理，运行各指南中的configure-idea前先建立对应运行配置。
+
+## 9. 快速检查与完整回归
+
+在仓库根目录执行：
+
+```sh
+python3 -B scripts/test_backend.py --check --suite quick
+python3 -B scripts/test_backend.py --suite quick
+python3 -B scripts/test_backend.py
+```
+
+quick只需要JDK17、Maven和Python3.9+，无需启动MySQL/Redis/MQ；all需要相应中间件二进制，但由工具启动临时服务，不连接真实业务库。依赖已缓存时可以加--offline。终端JAVA_HOME应指向17。
+
+工作流位于仓库根.github/workflows，支持独立后端及多项目布局，云端使用Ubuntu24.04和Temurin17；运行结果见Actions页面。详见[测试指南](../campus-market-server/TESTING.md)与[CI说明](../campus-market-server/CI.md)。
+
 ## 常见问题
 
 - IDEA无法识别Spring类：确认打开的是包含pom.xml的后端项目，JDK17，Maven依赖已导入。

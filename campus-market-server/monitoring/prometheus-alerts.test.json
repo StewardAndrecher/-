@@ -1,0 +1,1812 @@
+{
+  "rule_files": [
+    "prometheus-alerts.yml"
+  ],
+  "evaluation_interval": "5s",
+  "tests": [
+    {
+      "name": "healthy",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_broker_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_outbox_poll_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_pending{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_oldest_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_queue_ready{queue=\"parking\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_queue_consumers{queue=\"timeout\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "2m",
+          "alertname": "CampusBackendScrapeDown",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqMetricsMissing",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqBrokerUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqSnapshotStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusOutboxSamplingUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusOutboxBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqParkingBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqNoConsumer",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "name": "backend_down",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_broker_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_outbox_poll_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_pending{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_oldest_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_queue_ready{queue=\"parking\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_queue_consumers{queue=\"timeout\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "2m",
+          "alertname": "CampusBackendScrapeDown",
+          "exp_alerts": [
+            {
+              "exp_labels": {
+                "job": "campus-market",
+                "severity": "critical",
+                "component": "application",
+                "instance": "fixture:8080"
+              },
+              "exp_annotations": {
+                "summary": "应用指标采集失败",
+                "description": "连续30秒未能采集后端。检查后端进程、端口和独立采集凭证。"
+              }
+            }
+          ]
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqMetricsMissing",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqBrokerUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqSnapshotStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusOutboxSamplingUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusOutboxBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqParkingBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqNoConsumer",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "name": "short_scrape_failure",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_broker_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_outbox_poll_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_pending{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_oldest_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_queue_ready{queue=\"parking\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_queue_consumers{queue=\"timeout\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "2m",
+          "alertname": "CampusBackendScrapeDown",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqMetricsMissing",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqBrokerUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqSnapshotStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusOutboxSamplingUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusOutboxBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqParkingBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqNoConsumer",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "name": "mq_down_and_recovery",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_broker_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_outbox_poll_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_pending{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_oldest_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_queue_ready{queue=\"parking\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN"
+        },
+        {
+          "series": "campus_order_mq_queue_consumers{queue=\"timeout\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "20s",
+          "alertname": "CampusBackendScrapeDown",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "20s",
+          "alertname": "CampusMqMetricsMissing",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "20s",
+          "alertname": "CampusMqBrokerUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "20s",
+          "alertname": "CampusMqSnapshotStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "20s",
+          "alertname": "CampusOutboxSamplingUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "20s",
+          "alertname": "CampusOutboxBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "20s",
+          "alertname": "CampusMqParkingBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "20s",
+          "alertname": "CampusMqNoConsumer",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "40s",
+          "alertname": "CampusBackendScrapeDown",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "40s",
+          "alertname": "CampusMqMetricsMissing",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "40s",
+          "alertname": "CampusMqBrokerUnavailable",
+          "exp_alerts": [
+            {
+              "exp_labels": {
+                "job": "campus-market",
+                "severity": "critical",
+                "component": "mq",
+                "instance": "fixture:8080"
+              },
+              "exp_annotations": {
+                "summary": "MQ队列查询失败",
+                "description": "连续30秒无法完成三个队列查询。Outbox仍保留任务，检查RabbitMQ连接、队列和权限。"
+              }
+            }
+          ]
+        },
+        {
+          "eval_time": "40s",
+          "alertname": "CampusMqSnapshotStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "40s",
+          "alertname": "CampusOutboxSamplingUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "40s",
+          "alertname": "CampusOutboxBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "40s",
+          "alertname": "CampusMqParkingBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "40s",
+          "alertname": "CampusMqNoConsumer",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "60s",
+          "alertname": "CampusBackendScrapeDown",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "60s",
+          "alertname": "CampusMqMetricsMissing",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "60s",
+          "alertname": "CampusMqBrokerUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "60s",
+          "alertname": "CampusMqSnapshotStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "60s",
+          "alertname": "CampusOutboxSamplingUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "60s",
+          "alertname": "CampusOutboxBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "60s",
+          "alertname": "CampusMqParkingBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "60s",
+          "alertname": "CampusMqNoConsumer",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "name": "missing_mq_metric",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_outbox_poll_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_pending{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_oldest_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_queue_ready{queue=\"parking\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_queue_consumers{queue=\"timeout\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "70s",
+          "alertname": "CampusBackendScrapeDown",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "70s",
+          "alertname": "CampusMqMetricsMissing",
+          "exp_alerts": [
+            {
+              "exp_labels": {
+                "job": "campus-market",
+                "severity": "warning",
+                "component": "mq",
+                "instance": "fixture:8080"
+              },
+              "exp_annotations": {
+                "summary": "MQ指标缺失或无效",
+                "description": "应用可采集，但MQ状态指标连续1分钟缺失或无效。检查MQ及监控功能配置。"
+              }
+            }
+          ]
+        },
+        {
+          "eval_time": "70s",
+          "alertname": "CampusMqBrokerUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "70s",
+          "alertname": "CampusMqSnapshotStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "70s",
+          "alertname": "CampusOutboxSamplingUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "70s",
+          "alertname": "CampusOutboxBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "70s",
+          "alertname": "CampusMqParkingBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "70s",
+          "alertname": "CampusMqNoConsumer",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "name": "invalid_mq_metric",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_broker_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN"
+        },
+        {
+          "series": "campus_order_outbox_poll_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_pending{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_oldest_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_queue_ready{queue=\"parking\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_queue_consumers{queue=\"timeout\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "70s",
+          "alertname": "CampusBackendScrapeDown",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "70s",
+          "alertname": "CampusMqMetricsMissing",
+          "exp_alerts": [
+            {
+              "exp_labels": {
+                "job": "campus-market",
+                "severity": "warning",
+                "component": "mq",
+                "instance": "fixture:8080"
+              },
+              "exp_annotations": {
+                "summary": "MQ指标缺失或无效",
+                "description": "应用可采集，但MQ状态指标连续1分钟缺失或无效。检查MQ及监控功能配置。"
+              }
+            }
+          ]
+        },
+        {
+          "eval_time": "70s",
+          "alertname": "CampusMqBrokerUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "70s",
+          "alertname": "CampusMqSnapshotStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "70s",
+          "alertname": "CampusOutboxSamplingUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "70s",
+          "alertname": "CampusOutboxBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "70s",
+          "alertname": "CampusMqParkingBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "70s",
+          "alertname": "CampusMqNoConsumer",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "name": "mq_snapshot_stale_suppresses_consumer_alarm",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_broker_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_outbox_poll_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40"
+        },
+        {
+          "series": "campus_order_outbox_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_pending{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_oldest_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_queue_ready{queue=\"parking\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_queue_consumers{queue=\"timeout\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "2m",
+          "alertname": "CampusBackendScrapeDown",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqMetricsMissing",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqBrokerUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqSnapshotStale",
+          "exp_alerts": [
+            {
+              "exp_labels": {
+                "job": "campus-market",
+                "severity": "warning",
+                "component": "mq",
+                "instance": "fixture:8080"
+              },
+              "exp_annotations": {
+                "summary": "MQ快照过期或未知",
+                "description": "MQ状态曾正常，但快照年龄连续30秒不满足小于30秒。检查采样任务是否阻塞。"
+              }
+            }
+          ]
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusOutboxSamplingUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusOutboxBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqParkingBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqNoConsumer",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "name": "outbox_sampling_failed",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_broker_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_outbox_poll_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_pending{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN"
+        },
+        {
+          "series": "campus_order_outbox_oldest_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN"
+        },
+        {
+          "series": "campus_order_mq_queue_ready{queue=\"parking\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_queue_consumers{queue=\"timeout\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "2m",
+          "alertname": "CampusBackendScrapeDown",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqMetricsMissing",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqBrokerUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqSnapshotStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusOutboxSamplingUnavailable",
+          "exp_alerts": [
+            {
+              "exp_labels": {
+                "job": "campus-market",
+                "severity": "warning",
+                "component": "outbox",
+                "instance": "fixture:8080"
+              },
+              "exp_annotations": {
+                "summary": "Outbox采样失败或过期",
+                "description": "数据库采样失败、缺失或过期，积压值不能当作零。检查数据库与独立采样任务。"
+              }
+            }
+          ]
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusOutboxBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqParkingBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqNoConsumer",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "name": "outbox_snapshot_stale_suppresses_backlog_alarm",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_broker_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_outbox_poll_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40"
+        },
+        {
+          "series": "campus_order_outbox_pending{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20"
+        },
+        {
+          "series": "campus_order_outbox_oldest_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200"
+        },
+        {
+          "series": "campus_order_mq_queue_ready{queue=\"parking\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_queue_consumers{queue=\"timeout\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "2m",
+          "alertname": "CampusBackendScrapeDown",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqMetricsMissing",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqBrokerUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqSnapshotStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusOutboxSamplingUnavailable",
+          "exp_alerts": [
+            {
+              "exp_labels": {
+                "job": "campus-market",
+                "severity": "warning",
+                "component": "outbox",
+                "instance": "fixture:8080"
+              },
+              "exp_annotations": {
+                "summary": "Outbox采样失败或过期",
+                "description": "数据库采样失败、缺失或过期，积压值不能当作零。检查数据库与独立采样任务。"
+              }
+            }
+          ]
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusOutboxBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqParkingBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqNoConsumer",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "name": "sustained_outbox_backlog",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_broker_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_outbox_poll_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_pending{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3"
+        },
+        {
+          "series": "campus_order_outbox_oldest_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120"
+        },
+        {
+          "series": "campus_order_mq_queue_ready{queue=\"parking\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_queue_consumers{queue=\"timeout\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "50s",
+          "alertname": "CampusBackendScrapeDown",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "50s",
+          "alertname": "CampusMqMetricsMissing",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "50s",
+          "alertname": "CampusMqBrokerUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "50s",
+          "alertname": "CampusMqSnapshotStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "50s",
+          "alertname": "CampusOutboxSamplingUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "50s",
+          "alertname": "CampusOutboxBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "50s",
+          "alertname": "CampusMqParkingBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "50s",
+          "alertname": "CampusMqNoConsumer",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "70s",
+          "alertname": "CampusBackendScrapeDown",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "70s",
+          "alertname": "CampusMqMetricsMissing",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "70s",
+          "alertname": "CampusMqBrokerUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "70s",
+          "alertname": "CampusMqSnapshotStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "70s",
+          "alertname": "CampusOutboxSamplingUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "70s",
+          "alertname": "CampusOutboxBacklog",
+          "exp_alerts": [
+            {
+              "exp_labels": {
+                "job": "campus-market",
+                "severity": "warning",
+                "component": "outbox",
+                "instance": "fixture:8080"
+              },
+              "exp_annotations": {
+                "summary": "待发任务持续积压",
+                "description": "存在等待超过60秒的未确认任务，并持续1分钟。检查发布确认、租约重试与Broker。"
+              }
+            }
+          ]
+        },
+        {
+          "eval_time": "70s",
+          "alertname": "CampusMqParkingBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "70s",
+          "alertname": "CampusMqNoConsumer",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "name": "short_outbox_backlog",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_broker_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_outbox_poll_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_pending{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_oldest_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120 120"
+        },
+        {
+          "series": "campus_order_mq_queue_ready{queue=\"parking\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_queue_consumers{queue=\"timeout\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "2m",
+          "alertname": "CampusBackendScrapeDown",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqMetricsMissing",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqBrokerUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqSnapshotStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusOutboxSamplingUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusOutboxBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqParkingBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqNoConsumer",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "name": "parking_backlog",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_broker_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_outbox_poll_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_pending{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_oldest_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_queue_ready{queue=\"parking\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2"
+        },
+        {
+          "series": "campus_order_mq_queue_consumers{queue=\"timeout\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "2m",
+          "alertname": "CampusBackendScrapeDown",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqMetricsMissing",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqBrokerUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqSnapshotStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusOutboxSamplingUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusOutboxBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqParkingBacklog",
+          "exp_alerts": [
+            {
+              "exp_labels": {
+                "job": "campus-market",
+                "severity": "warning",
+                "component": "mq",
+                "instance": "fixture:8080",
+                "queue": "parking"
+              },
+              "exp_annotations": {
+                "summary": "消费失败保留队列有积压",
+                "description": "parking队列可读取消息持续30秒大于零。先排查失败原因，勿直接清空或盲目重投。"
+              }
+            }
+          ]
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqNoConsumer",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "name": "missing_consumer",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_broker_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_outbox_poll_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_pending{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_oldest_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_queue_ready{queue=\"parking\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_queue_consumers{queue=\"timeout\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "2m",
+          "alertname": "CampusBackendScrapeDown",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqMetricsMissing",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqBrokerUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqSnapshotStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusOutboxSamplingUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusOutboxBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqParkingBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqNoConsumer",
+          "exp_alerts": [
+            {
+              "exp_labels": {
+                "job": "campus-market",
+                "severity": "critical",
+                "component": "mq",
+                "instance": "fixture:8080",
+                "queue": "timeout"
+              },
+              "exp_annotations": {
+                "summary": "超时处理队列没有消费者",
+                "description": "队列查询正常，但timeout队列消费者连续30秒为零。检查后端消费者启动与恢复。"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "unknown_queue_is_not_zero",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_broker_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_outbox_poll_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_pending{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_oldest_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_queue_ready{queue=\"parking\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN"
+        },
+        {
+          "series": "campus_order_mq_queue_consumers{queue=\"timeout\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "2m",
+          "alertname": "CampusBackendScrapeDown",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqMetricsMissing",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqBrokerUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqSnapshotStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusOutboxSamplingUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusOutboxBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqParkingBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqNoConsumer",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "name": "scrape_target_absent",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "campus_order_mq_broker_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_outbox_poll_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_pending{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_oldest_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_queue_ready{queue=\"parking\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_queue_consumers{queue=\"timeout\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "2m",
+          "alertname": "CampusBackendScrapeDown",
+          "exp_alerts": [
+            {
+              "exp_labels": {
+                "job": "campus-market",
+                "severity": "critical",
+                "component": "application"
+              },
+              "exp_annotations": {
+                "summary": "应用指标采集失败",
+                "description": "连续30秒未能采集后端。检查后端进程、端口和独立采集凭证。"
+              }
+            }
+          ]
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqMetricsMissing",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqBrokerUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqSnapshotStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusOutboxSamplingUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusOutboxBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqParkingBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "2m",
+          "alertname": "CampusMqNoConsumer",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "name": "one_of_two_targets_missing_mq",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"missing:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_outbox_poll_up{job=\"campus-market\",instance=\"missing:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_sample_age_seconds{job=\"campus-market\",instance=\"missing:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_sample_age_seconds{job=\"campus-market\",instance=\"missing:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_pending{job=\"campus-market\",instance=\"missing:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_oldest_seconds{job=\"campus-market\",instance=\"missing:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_queue_ready{queue=\"parking\",job=\"campus-market\",instance=\"missing:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_queue_consumers{queue=\"timeout\",job=\"campus-market\",instance=\"missing:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "up{job=\"campus-market\",instance=\"healthy:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_broker_up{job=\"campus-market\",instance=\"healthy:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_outbox_poll_up{job=\"campus-market\",instance=\"healthy:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_sample_age_seconds{job=\"campus-market\",instance=\"healthy:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_sample_age_seconds{job=\"campus-market\",instance=\"healthy:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_pending{job=\"campus-market\",instance=\"healthy:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_oldest_seconds{job=\"campus-market\",instance=\"healthy:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_queue_ready{queue=\"parking\",job=\"campus-market\",instance=\"healthy:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_queue_consumers{queue=\"timeout\",job=\"campus-market\",instance=\"healthy:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "70s",
+          "alertname": "CampusBackendScrapeDown",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "70s",
+          "alertname": "CampusMqMetricsMissing",
+          "exp_alerts": [
+            {
+              "exp_labels": {
+                "job": "campus-market",
+                "severity": "warning",
+                "component": "mq",
+                "instance": "missing:8080"
+              },
+              "exp_annotations": {
+                "summary": "MQ指标缺失或无效",
+                "description": "应用可采集，但MQ状态指标连续1分钟缺失或无效。检查MQ及监控功能配置。"
+              }
+            }
+          ]
+        },
+        {
+          "eval_time": "70s",
+          "alertname": "CampusMqBrokerUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "70s",
+          "alertname": "CampusMqSnapshotStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "70s",
+          "alertname": "CampusOutboxSamplingUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "70s",
+          "alertname": "CampusOutboxBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "70s",
+          "alertname": "CampusMqParkingBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "70s",
+          "alertname": "CampusMqNoConsumer",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "name": "explicit_pending_then_firing",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_broker_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_poll_up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "series": "campus_order_mq_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_sample_age_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_pending{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_outbox_oldest_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_queue_ready{queue=\"parking\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+        },
+        {
+          "series": "campus_order_mq_queue_consumers{queue=\"timeout\",job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "10s",
+          "alertname": "CampusBackendScrapeDown",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "10s",
+          "alertname": "CampusMqMetricsMissing",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "10s",
+          "alertname": "CampusMqBrokerUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "10s",
+          "alertname": "CampusMqSnapshotStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "10s",
+          "alertname": "CampusOutboxSamplingUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "10s",
+          "alertname": "CampusOutboxBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "10s",
+          "alertname": "CampusMqParkingBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "10s",
+          "alertname": "CampusMqNoConsumer",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "40s",
+          "alertname": "CampusBackendScrapeDown",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "40s",
+          "alertname": "CampusMqMetricsMissing",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "40s",
+          "alertname": "CampusMqBrokerUnavailable",
+          "exp_alerts": [
+            {
+              "exp_labels": {
+                "job": "campus-market",
+                "severity": "critical",
+                "component": "mq",
+                "instance": "fixture:8080"
+              },
+              "exp_annotations": {
+                "summary": "MQ队列查询失败",
+                "description": "连续30秒无法完成三个队列查询。Outbox仍保留任务，检查RabbitMQ连接、队列和权限。"
+              }
+            }
+          ]
+        },
+        {
+          "eval_time": "40s",
+          "alertname": "CampusMqSnapshotStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "40s",
+          "alertname": "CampusOutboxSamplingUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "40s",
+          "alertname": "CampusOutboxBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "40s",
+          "alertname": "CampusMqParkingBacklog",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "40s",
+          "alertname": "CampusMqNoConsumer",
+          "exp_alerts": []
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "ALERTS{alertname=\"CampusMqBrokerUnavailable\",alertstate=\"pending\"}",
+          "eval_time": "10s",
+          "exp_samples": [
+            {
+              "labels": "ALERTS{alertname=\"CampusMqBrokerUnavailable\",alertstate=\"pending\",job=\"campus-market\",instance=\"fixture:8080\",severity=\"critical\",component=\"mq\"}",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "expr": "ALERTS{alertname=\"CampusMqBrokerUnavailable\",alertstate=\"firing\"}",
+          "eval_time": "40s",
+          "exp_samples": [
+            {
+              "labels": "ALERTS{alertname=\"CampusMqBrokerUnavailable\",alertstate=\"firing\",job=\"campus-market\",instance=\"fixture:8080\",severity=\"critical\",component=\"mq\"}",
+              "value": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

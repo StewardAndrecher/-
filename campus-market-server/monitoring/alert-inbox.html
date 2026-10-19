@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>校园集市 · 告警收件箱</title><link rel="stylesheet" href="/inbox.css"><script defer src="/inbox.js"></script></head>
+<body><main><header><div><p class="eyebrow">CAMPUS MARKET / OBSERVABILITY</p><h1>告警收件箱</h1><p class="intro">把一次故障的发生与恢复，连成可追踪的记录。</p></div><span class="local">仅本机 · 只读</span></header>
+<section class="flow"><span>Prometheus <small>发现异常</small></span><b>→</b><span>Alertmanager <small>分组与去重</small></span><b>→</b><span>本机收件箱 <small>保存通知</small></span></section>
+<section class="stats"><article><p>已保留投递</p><strong id="total">—</strong></article><article><p>最近一次通知</p><strong id="latest">—</strong></article><article><p>接收器状态</p><strong id="connection">读取中</strong></article></section>
+<div class="heading"><h2>通知时间线</h2><span id="updated">每 5 秒刷新</span></div><p id="empty" class="empty">正在读取通知……</p><section id="list" aria-live="polite"></section>
+<footer>显示最近 100 次投递，最多保留 1000 次。这里展示通知历史；当前告警状态请查看 Alertmanager。重复投递也会保留。</footer>
+</main></body></html>

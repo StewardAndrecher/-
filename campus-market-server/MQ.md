@@ -59,3 +59,7 @@ WHERE published_at IS NULL GROUP BY last_error;
 - [Spring AMQP Confirm与Return](https://docs.spring.io/spring-amqp/reference/amqp/template.html)
 - [RabbitMQ Quorum与至少一次死信](https://www.rabbitmq.com/docs/quorum-queues)
 - [RabbitMQ TTL](https://www.rabbitmq.com/docs/ttl)
+
+第75课继续增加指标与Prometheus采集，见[MQ监控](MQ_MONITORING.md)。
+
+第79课继续使用已有事件编号关联异步阶段，见[MQ关联日志](MQ_LOGGING.md)。

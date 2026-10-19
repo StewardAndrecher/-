@@ -16,4 +16,4 @@ Path('.test-results').mkdir(exist_ok=True);Path('.test-results/frontend.json').w
 if len(results)!=47 or not all(r['ok'] for r in results):raise SystemExit(1)
 tests=sorted(str(p) for p in Path('campus-market-client/tools').glob('*.test.mjs'))
 subprocess.run([node,'--test',*tests],check=True,env=env)
-print('PASS:47 frontend groups and37 build/storage/network tests; all3platform builds verified.')
+print('PASS:47 frontend groups and50 build/storage/network/request tests; all3platform builds verified.')

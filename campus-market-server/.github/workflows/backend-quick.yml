@@ -1,0 +1,69 @@
+name: Backend quick checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-quick:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Locate backend directory
+        id: backend
+        shell: bash
+        run: |
+          if [[ -f campus-market-server/pom.xml ]]; then
+            echo 'dir=campus-market-server' >> "$GITHUB_OUTPUT"
+          elif [[ -f pom.xml ]]; then
+            echo 'dir=.' >> "$GITHUB_OUTPUT"
+          else
+            echo 'Backend pom.xml not found' >&2
+            exit 1
+          fi
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+          cache-dependency-path: '**/pom.xml'
+
+      - name: Verify test tooling
+        working-directory: ${{ steps.backend.outputs.dir }}
+        run: python3 -B -m unittest discover -s scripts/tests -v
+
+      - name: Check quick dependencies
+        working-directory: ${{ steps.backend.outputs.dir }}
+        run: python3 -B scripts/test_backend.py --check --suite quick
+
+      - name: Run quick Java tests
+        working-directory: ${{ steps.backend.outputs.dir }}
+        run: python3 -B scripts/test_backend.py --suite quick
+
+      - name: Upload verification reports
+        if: ${{ always() && steps.backend.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: backend-quick-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ steps.backend.outputs.dir }}/data/test-results/latest.json
+            ${{ steps.backend.outputs.dir }}/data/test-results/*/summary.json
+            ${{ steps.backend.outputs.dir }}/data/test-results/*/maven.log
+            ${{ steps.backend.outputs.dir }}/data/test-results/*/junit/TEST-*.xml
+          if-no-files-found: warn
+          retention-days: 7

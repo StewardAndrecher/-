@@ -1,0 +1,77 @@
+# 第76课：生产规则；只适用于开启MQ和监控的campus-market采集目标。
+groups:
+  - name: campus-market-mq
+    interval: 5s
+    rules:
+      - alert: CampusBackendScrapeDown
+        expr: "(up{job=\"campus-market\"} == 0) or absent(up{job=\"campus-market\"})"
+        for: 30s
+        labels:
+          severity: "critical"
+          component: "application"
+        annotations:
+          summary: "应用指标采集失败"
+          description: "连续30秒未能采集后端。检查后端进程、端口和独立采集凭证。"
+      - alert: CampusMqMetricsMissing
+        expr: "(up{job=\"campus-market\"} == 1) unless on(job,instance) ((campus_order_mq_broker_up{job=\"campus-market\"} == 0) or (campus_order_mq_broker_up{job=\"campus-market\"} == 1))"
+        for: 1m
+        labels:
+          severity: "warning"
+          component: "mq"
+        annotations:
+          summary: "MQ指标缺失或无效"
+          description: "应用可采集，但MQ状态指标连续1分钟缺失或无效。检查MQ及监控功能配置。"
+      - alert: CampusMqBrokerUnavailable
+        expr: "(campus_order_mq_broker_up{job=\"campus-market\"} == 0) and on(job,instance) (up{job=\"campus-market\"} == 1)"
+        for: 30s
+        labels:
+          severity: "critical"
+          component: "mq"
+        annotations:
+          summary: "MQ队列查询失败"
+          description: "连续30秒无法完成三个队列查询。Outbox仍保留任务，检查RabbitMQ连接、队列和权限。"
+      - alert: CampusMqSnapshotStale
+        expr: "((campus_order_mq_broker_up{job=\"campus-market\"} == 1) and on(job,instance) (up{job=\"campus-market\"} == 1)) unless on(job,instance) (campus_order_mq_sample_age_seconds{job=\"campus-market\"} < 30)"
+        for: 30s
+        labels:
+          severity: "warning"
+          component: "mq"
+        annotations:
+          summary: "MQ快照过期或未知"
+          description: "MQ状态曾正常，但快照年龄连续30秒不满足小于30秒。检查采样任务是否阻塞。"
+      - alert: CampusOutboxSamplingUnavailable
+        expr: "(up{job=\"campus-market\"} == 1) unless on(job,instance) ((campus_order_outbox_poll_up{job=\"campus-market\"} == 1) and on(job,instance) (campus_order_outbox_sample_age_seconds{job=\"campus-market\"} < 30))"
+        for: 30s
+        labels:
+          severity: "warning"
+          component: "outbox"
+        annotations:
+          summary: "Outbox采样失败或过期"
+          description: "数据库采样失败、缺失或过期，积压值不能当作零。检查数据库与独立采样任务。"
+      - alert: CampusOutboxBacklog
+        expr: "(campus_order_outbox_pending{job=\"campus-market\"} > 0) and on(job,instance) (campus_order_outbox_oldest_seconds{job=\"campus-market\"} > 60) and on(job,instance) ((campus_order_outbox_poll_up{job=\"campus-market\"} == 1) and on(job,instance) (campus_order_outbox_sample_age_seconds{job=\"campus-market\"} < 30) and on(job,instance) (up{job=\"campus-market\"} == 1))"
+        for: 1m
+        labels:
+          severity: "warning"
+          component: "outbox"
+        annotations:
+          summary: "待发任务持续积压"
+          description: "存在等待超过60秒的未确认任务，并持续1分钟。检查发布确认、租约重试与Broker。"
+      - alert: CampusMqParkingBacklog
+        expr: "(campus_order_mq_queue_ready{job=\"campus-market\",queue=\"parking\"} > 0) and on(job,instance) ((campus_order_mq_broker_up{job=\"campus-market\"} == 1) and on(job,instance) (campus_order_mq_sample_age_seconds{job=\"campus-market\"} < 30) and on(job,instance) (up{job=\"campus-market\"} == 1))"
+        for: 30s
+        labels:
+          severity: "warning"
+          component: "mq"
+        annotations:
+          summary: "消费失败保留队列有积压"
+          description: "parking队列可读取消息持续30秒大于零。先排查失败原因，勿直接清空或盲目重投。"
+      - alert: CampusMqNoConsumer
+        expr: "(campus_order_mq_queue_consumers{job=\"campus-market\",queue=\"timeout\"} == 0) and on(job,instance) ((campus_order_mq_broker_up{job=\"campus-market\"} == 1) and on(job,instance) (campus_order_mq_sample_age_seconds{job=\"campus-market\"} < 30) and on(job,instance) (up{job=\"campus-market\"} == 1))"
+        for: 30s
+        labels:
+          severity: "critical"
+          component: "mq"
+        annotations:
+          summary: "超时处理队列没有消费者"
+          description: "队列查询正常，但timeout队列消费者连续30秒为零。检查后端消费者启动与恢复。"
