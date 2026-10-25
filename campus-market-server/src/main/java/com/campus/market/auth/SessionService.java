@@ -19,7 +19,9 @@ public class SessionService {
         this.sessionRepository = sessionRepository;
     }
 
+    @org.springframework.transaction.annotation.Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public LoginResponse issueToken(UserResponse user) {
+        sessionRepository.lockUser(user.id());
         byte[] bytes = new byte[32];
         secureRandom.nextBytes(bytes);
         String token = Base64.getUrlEncoder().withoutPadding()
@@ -34,6 +36,10 @@ public class SessionService {
         String token = extractToken(authorization);
         return sessionRepository.findCurrentUser(hashToken(token))
                 .orElseThrow(LoginRequiredException::new);
+    }
+
+    String tokenHash(String authorization) {
+        return hashToken(extractToken(authorization));
     }
 
     public void logout(String authorization) {

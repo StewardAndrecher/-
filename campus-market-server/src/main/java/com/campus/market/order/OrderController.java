@@ -28,6 +28,6 @@ public class OrderController {
   return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.timeline(id,auth));
  }
  @GetMapping("/api/orders/{id}") public ResponseEntity<Order> detail(@PathVariable long id,@RequestHeader(value="Authorization",required=false)String auth){return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.detail(id,auth));}
- @GetMapping("/api/orders") public ResponseEntity<Page> page(@RequestParam(defaultValue="BUYER")String role,@RequestParam(defaultValue="ALL")String status,@RequestParam(defaultValue="1")int page,@RequestParam(defaultValue="10")int size,@RequestHeader(value="Authorization",required=false)String auth){return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.page(role,status,page,size,auth));}
+ @GetMapping("/api/orders") public ResponseEntity<Page> page(@RequestParam(defaultValue="BUYER")String role,@RequestParam(defaultValue="ALL")String status,@RequestParam(required=false)String orderId,@RequestParam(defaultValue="1")int page,@RequestParam(defaultValue="10")int size,@RequestHeader(value="Authorization",required=false)String auth){return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.page(role,status,orderId==null?"":orderId,page,size,auth));}
  @GetMapping("/api/products/{id}/order-state") public ResponseEntity<State> state(@PathVariable long id,@RequestHeader(value="Authorization",required=false)String auth){return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.state(id,auth));}
 }

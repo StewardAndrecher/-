@@ -97,7 +97,7 @@ class ProductDetailCacheIntegrationTest {
     @Test void storesReadableChineseJsonWithBoundedTtlAndNoAccountData() {
         detail();String value=redis.opsForValue().get(key(0));assertNotNull(value);
         var node=json.readTree(value);assertEquals("缓存教材",node.get("title").asText());
-        assertEquals(7,node.size());
+        assertEquals(8,node.size());
         for(String privateField:new String[]{"seller","nickname","favoriteCount","username","password","accessToken","authorization","status"})
             assertFalse(node.has(privateField),privateField);
         long ttl=redis.getExpire(key(0),TimeUnit.MILLISECONDS);assertTrue(ttl>0 && ttl<=75_000);
@@ -192,7 +192,7 @@ class ProductDetailCacheIntegrationTest {
         var miss=detail();var hit=detail();assertEquals(miss,hit);assertEquals("/api/images/"+image,hit.coverImageUrl());
         var response=mvc.perform(get("/api/products/"+id)).andReturn().getResponse();
         assertEquals(200,response.getStatus());assertEquals("no-store",response.getHeader("Cache-Control"));
-        assertEquals(11,json.readTree(response.getContentAsString(StandardCharsets.UTF_8)).size());
+        assertEquals(12,json.readTree(response.getContentAsString(StandardCharsets.UTF_8)).size());
     }
     @Test void noOpAndRejectedWritesDoNotEvictValidCache() throws Exception {
         detail();String value=redis.opsForValue().get(key(0));

@@ -10,11 +10,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class CommentService {
+    private final com.campus.market.governance.WriteGovernance governance;
+    private final com.campus.market.governance.ContentRules rules;
     private final CommentRepository comments;
     private final ProductService productService;
     private final SessionService sessions;
 
-    public CommentService(CommentRepository comments, ProductService productService, SessionService sessions) {
+    public CommentService(CommentRepository comments, ProductService productService, SessionService sessions,com.campus.market.governance.WriteGovernance governance,com.campus.market.governance.ContentRules rules) {this.governance=governance;this.rules=rules;
         this.comments = comments;
         this.productService = productService;
         this.sessions = sessions;
@@ -33,6 +35,7 @@ public class CommentService {
     @Transactional
     public CommentSubmissionResponse create(long productId, CreateCommentRequest request, String authorization) {
         var user = sessions.currentUser(authorization);
+        governance.lockUser(user.id());
         validateId(productId);
         String content = request == null || request.content() == null ? "" : request.content().strip();
         int length = content.codePointCount(0, content.length());
@@ -54,6 +57,7 @@ public class CommentService {
         }
         // 原提交可确认；新的提交仍要求商品在售。
         if (status != ProductStatus.ON_SALE) throw new ProductNotFoundException("商品不在售，暂不支持新留言");
+        rules.requireAllowed(content);governance.requireWritable(user.id(),"COMMENT");
         long id = comments.insert(productId, user.id(), content, requestId);
         return receipt(productId, id, requestId, false, false);
     }

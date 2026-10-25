@@ -1,6 +1,6 @@
 # 第40课：复用uni-app网页生成桌面客户端
 
-新增同级项目：campus-market-desktop。
+新增同级项目：/path/to/campus-market-desktop。
 
 前端业务仍写在当前uni-app项目；用./tools/build.sh h5生成验收网页后，在桌面项目执行npm run sync:web。Electron使用这份独立产物，不加载开发热更新服务，不改动微信产物目录。
 
@@ -8,7 +8,7 @@ Electron 44.7.0和@electron/packager 20.3.0是桌面项目的开发依赖，前�
 
 启动：
 ```sh
-cd campus-market-desktop
+cd /path/to/campus-market-desktop
 npm start
 ```
 

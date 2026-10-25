@@ -11,8 +11,8 @@ public class SellerRepository {
     public SellerRepository(JdbcTemplate jdbc) { this.jdbc = jdbc; }
 
     public Optional<SellerResponse> findPublicSeller(long id) {
-        return jdbc.query("SELECT id, nickname FROM users WHERE id = ?",
-                (rs, row) -> new SellerResponse(rs.getLong("id"), rs.getString("nickname")), id)
+        return jdbc.query("SELECT id, nickname,avatar_image_id,bio,campus_code FROM users WHERE id = ?",
+                (rs, row) -> new SellerResponse(rs.getLong("id"), rs.getString("nickname"),rs.getString("avatar_image_id"),rs.getString("bio"),rs.getString("campus_code")), id)
                 .stream().findFirst();
     }
 }

@@ -3,7 +3,8 @@
     {
       "path": "pages/index/index",
       "style": {
-        "navigationBarTitleText": "校园集市"
+        "navigationBarTitleText": "校园集市",
+        "navigationStyle": "custom"
       }
     },
     {
@@ -83,13 +84,230 @@
       "style": {
         "navigationBarTitleText": "我的订单"
       }
+    },
+    {
+      "path": "pages/product/feed",
+      "style": {
+        "navigationBarTitleText": "连续浏览",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/admin/index",
+      "style": {
+        "navigationBarTitleText": "管理中心"
+      }
+    },
+    {
+      "path": "pages/admin/products",
+      "style": {
+        "navigationBarTitleText": "商品审核"
+      }
+    },
+    {
+      "path": "pages/admin/product-review",
+      "style": {
+        "navigationBarTitleText": "商品审核处理"
+      }
+    },
+    {
+      "path": "pages/product/moderation",
+      "style": {
+        "navigationBarTitleText": "平台处理与复核"
+      }
+    },
+    {
+      "path": "pages/report/create",
+      "style": {
+        "navigationBarTitleText": "举报商品"
+      }
+    },
+    {
+      "path": "pages/report/list",
+      "style": {
+        "navigationBarTitleText": "我的举报"
+      }
+    },
+    {
+      "path": "pages/report/detail",
+      "style": {
+        "navigationBarTitleText": "举报工单"
+      }
+    },
+    {
+      "path": "pages/admin/reports",
+      "style": {
+        "navigationBarTitleText": "举报工单"
+      }
+    },
+    {
+      "path": "pages/notification/list",
+      "style": {
+        "navigationBarTitleText": "站内通知"
+      }
+    },
+    {
+      "path": "pages/admin/notifications",
+      "style": {
+        "navigationBarTitleText": "通知投递概览"
+      }
+    },
+    {
+      "path": "pages/admin/orders",
+      "style": {
+        "navigationBarTitleText": "交易运营概览"
+      }
+    },
+    {
+      "path": "pages/admin/order-list",
+      "style": {
+        "navigationBarTitleText": "管理员订单检索"
+      }
+    },
+    {
+      "path": "pages/admin/order-detail",
+      "style": {
+        "navigationBarTitleText": "管理员订单详情"
+      }
+    },
+    {
+      "path": "pages/user/sessions",
+      "style": {
+        "navigationBarTitleText": "登录会话管理"
+      }
+    },
+    {
+      "path": "pages/user/password",
+      "style": {
+        "navigationBarTitleText": "修改密码"
+      }
+    },
+    {
+      "path": "pages/order/reviews",
+      "style": {
+        "navigationBarTitleText": "交易评价"
+      }
+    },
+    {
+      "path": "pages/order/review-tasks",
+      "style": {
+        "navigationBarTitleText": "我的交易评价"
+      }
+    },
+    {
+      "path": "pages/order/issues",
+      "style": {
+        "navigationBarTitleText": "我的交易反馈"
+      }
+    },
+    {
+      "path": "pages/order/issue",
+      "style": {
+        "navigationBarTitleText": "交易问题反馈"
+      }
+    },
+    {
+      "path": "pages/admin/issue-overview",
+      "style": {
+        "navigationBarTitleText": "反馈处理概览"
+      }
+    },
+    {
+      "path": "pages/admin/order-issues",
+      "style": {
+        "navigationBarTitleText": "交易问题工单"
+      }
+    },
+    {
+      "path": "pages/admin/order-issue",
+      "style": {
+        "navigationBarTitleText": "反馈工单详情"
+      }
+    },
+    {
+      "path": "pages/order/tasks",
+      "style": {
+        "navigationBarTitleText": "我的交易待办"
+      }
+    },
+    {
+      "path": "pages/order/export",
+      "style": {
+        "navigationBarTitleText": "个人订单导出"
+      }
+    },
+    {
+      "path": "pages/user/session-list",
+      "style": {
+        "navigationBarTitleText": "有效登录明细"
+      }
+    },
+    {
+      "path": "pages/order/received-reviews",
+      "style": {
+        "navigationBarTitleText": "我收到的交易评价"
+      }
+    },
+    {
+      "path": "pages/product/favorite-manage",
+      "style": {
+        "navigationBarTitleText": "收藏批量管理"
+      }
+    },
+    {
+      "path": "pages/order/refund",
+      "style": {
+        "navigationBarTitleText": "退款与售后"
+      }
+    },
+    {
+      "path": "pages/order/refunds",
+      "style": {
+        "navigationBarTitleText": "我的退款售后"
+      }
+    },
+    {
+      "path": "pages/user/recovery",
+      "style": {
+        "navigationBarTitleText": "账号恢复与安全"
+      }
+    },
+    {
+      "path": "pages/user/email",
+      "style": {
+        "navigationBarTitleText": "邮箱绑定与找回"
+      }
+    },
+    {
+      "path": "pages/user/content-status",
+      "style": {
+        "navigationBarTitleText": "内容与账号状态"
+      }
+    },
+    {
+      "path": "pages/user/images",
+      "style": {
+        "navigationBarTitleText": "图片空间"
+      }
+    },
+    {
+      "path": "pages/admin/governance",
+      "style": {
+        "navigationBarTitleText": "内容与滥用治理"
+      }
+    },
+    {
+      "path": "pages/admin/media",
+      "style": {
+        "navigationBarTitleText": "图片存储管理"
+      }
     }
   ],
   "globalStyle": {
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "uni-app",
-    "navigationBarBackgroundColor": "#F8F8F8",
-    "backgroundColor": "#F8F8F8"
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "backgroundColor": "#F5F7FC"
   },
   "uniIdRouter": {}
 }

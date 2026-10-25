@@ -2,3 +2,5 @@ unpackage/
 .DS_Store
 .hbuilderx/
 node_modules/
+__pycache__/
+*.pyc

@@ -16,7 +16,7 @@ class BackendToolsTests(unittest.TestCase):
     def report(self,name='com.campus.market.OneTest',tests=1,failures=0,errors=0,skipped=0,filename=None):
         p=self.root/(filename or 'TEST-'+name+'.xml');p.write_text(f'<testsuite name="{name}" tests="{tests}" failures="{failures}" errors="{errors}" skipped="{skipped}">'+('<testcase name="case"/>'*max(tests,0))+'</testsuite>');return p
     def test_environment_drops_live_service_and_jvm_settings(self):
-        dangerous=['DB_PASSWORD','MYSQL_PWD','LESSON74_DB_URL','SPRING_APPLICATION_JSON','SPRING_CONFIG_LOCATION','SPRING_DATASOURCE_URL','API_DOCS_ENABLED','MONITORING_TOKEN','RABBITMQ_PASSWORD','MAVEN_OPTS','JAVA_TOOL_OPTIONS','JDK_JAVA_OPTIONS','HTTP_PROXY']
+        dangerous=['DB_PASSWORD','MYSQL_PWD','DB_MIGRATION_ENABLED','SPRING_FLYWAY_ENABLED','LESSON74_DB_URL','SPRING_APPLICATION_JSON','SPRING_CONFIG_LOCATION','SPRING_DATASOURCE_URL','API_DOCS_ENABLED','MONITORING_TOKEN','RABBITMQ_PASSWORD','MAVEN_OPTS','JAVA_TOOL_OPTIONS','JDK_JAVA_OPTIONS','HTTP_PROXY']
         source={k:'do-not-inherit' for k in dangerous};source.update(PATH='/bin',HOME='/home/student',JAVA_HOME='/jdk17',LANG='C.UTF-8')
         self.assertEqual({'PATH':'/bin','HOME':'/home/student','JAVA_HOME':'/jdk17','LANG':'C.UTF-8'},isolated_environment(source))
     def test_discovers_tests_and_ignores_non_test_helpers(self):
@@ -126,7 +126,7 @@ class BackendToolsTests(unittest.TestCase):
         project=self.root/'project';(project/'scripts').mkdir(parents=True)
         runtime=self.root/'runtime';runtime.mkdir()
         def quick(*args):
-            shutil.rmtree(args[3]);return {'tests':73,'failures':0,'errors':0,'skipped':0,'suites':8,'sourceSha256':'fixture'}
+            shutil.rmtree(args[3]);return {'tests':89,'failures':0,'errors':0,'skipped':0,'suites':10,'sourceSha256':'fixture'}
         with patch.object(test_backend,'__file__',str(project/'scripts/test_backend.py')),patch.object(sys,'argv',['test_backend.py','--suite','quick']),patch.object(test_backend,'locate_tools',return_value={}),patch.object(test_backend,'discover_tests',return_value={'OneTest':'com.campus.market.OneTest'}),patch.object(test_backend.tempfile,'mkdtemp',return_value=str(runtime)),patch('backend_quick_runtime.execute',side_effect=quick) as pure,patch('backend_test_runtime.execute') as services,contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(0,test_backend.main())
         pure.assert_called_once();services.assert_not_called();record=json.loads((project/'data/test-results/latest.json').read_text());self.assertFalse(record['requiresMiddleware'])

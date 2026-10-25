@@ -50,6 +50,8 @@ if args.action=='start':
  dashboard=json.loads((source/'grafana-mq-dashboard.json').read_text())
  for link in dashboard.get('links',[]):link['url']=link['url'].replace('http://127.0.0.1:9090','http://127.0.0.1:'+str(args.prometheus_port))
  (runtime/'dashboards/campus-mq.json').write_text(json.dumps(dashboard,ensure_ascii=False))
+ shutil.copy2(source/'grafana-notification-dashboard.json',runtime/'dashboards/campus-notification.json')
+ shutil.copy2(source/'grafana-registration-dashboard.json',runtime/'dashboards/campus-registration.json')
  config=runtime/'grafana.ini'
  config.write_text('''[server]
 http_addr = 127.0.0.1

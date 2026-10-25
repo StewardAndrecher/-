@@ -47,8 +47,9 @@ onMounted(load)
 </script>
 
 <style scoped>
-.category-picker { margin: 20rpx 0; }
-.label { display: block; margin-bottom: 12rpx; font-size: 28rpx; }
-.selection { padding: 18rpx; border: 1px solid #ddd; border-radius: 10rpx; background: #fff; }
-.error { display: block; color: #b42318; font-size: 26rpx; margin: 10rpx 0; }
+.category-picker { margin: 16px 0; min-width: 0; }
+.label { display: block; margin-bottom: 8px; font-size: 12px; color: #7788a1; }
+picker { min-width: 0; }
+.selection { padding: 10px 12px; min-height: 40px; border: 1px solid #e1e7f1; border-radius: 8px; background: #f9fafd; color: #526681; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.error { display: block; color: #b42318; font-size: 12px; margin: 10px 0; }
 </style>

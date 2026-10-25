@@ -25,5 +25,5 @@ receivers:
             credentials_file: __TOKEN_PATH_JSON__
 inhibit_rules:
   - source_matchers: ['alertname="CampusBackendScrapeDown"']
-    target_matchers: ['component=~"mq|outbox"']
+    target_matchers: ['component=~"mq|outbox|notification|registration"']
     equal: [job, instance]

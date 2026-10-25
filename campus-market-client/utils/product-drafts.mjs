@@ -1,3 +1,4 @@
+import { productDetails } from './product-details.mjs'
 const PREFIX = 'campus-product-drafts-v1:'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const CATEGORIES = ['UNCLASSIFIED', 'BOOK', 'DIGITAL', 'DAILY', 'SPORT', 'OTHER']
@@ -13,11 +14,11 @@ export function draftContent(value) {
       !(value.coverImageId === '' || typeof value.coverImageId === 'string' && UUID.test(value.coverImageId)) ||
       !CATEGORIES.includes(value.categoryCode)) throw new Error('草稿内容格式不正确')
   return { title: value.title, description: value.description, priceText: value.priceText,
-    coverImageId: value.coverImageId, categoryCode: value.categoryCode }
+    coverImageId: value.coverImageId, categoryCode: value.categoryCode, ...(value.details != null ? { details: productDetails(value.details,value.coverImageId) } : {}) }
 }
 export function hasDraftContent(value) {
   const p = draftContent(value)
-  return !!(p.title.trim() || p.description.trim() || p.priceText || p.coverImageId || p.categoryCode !== 'OTHER')
+  return !!(p.title.trim() || p.description.trim() || p.priceText || p.coverImageId || p.categoryCode !== 'OTHER' || p.details && (p.details.campusCode !== 'UNSPECIFIED' || p.details.conditionCode !== 'UNSPECIFIED' || p.details.handoverLocation))
 }
 function read(userId) {
   const storageKey = key(userId), raw = uni.getStorageSync(storageKey)

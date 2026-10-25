@@ -1,0 +1,372 @@
+{
+  "uid": "campus-registration-protection",
+  "title": "校园集市 · 注册保护监控",
+  "description": "统计保护判断，不等于注册成功。错误数为零不能证明Redis健康。计数器随后端进程重启归零。",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": false,
+  "timezone": "browser",
+  "refresh": "15s",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "tags": [
+    "campus-market",
+    "registration"
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "title": "保护开关（1开启／0关闭）",
+      "description": "统计保护判断，不等于注册成功。错误数为零不能证明Redis健康。计数器随后端进程重启归零。",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 6
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "未知",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "campus_registration_protection_enabled{job=\"campus-market\"}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "campus-prometheus"
+          },
+          "legendFormat": "{{instance}} · {{outcome}}"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "每个连接地址的窗口上限",
+      "description": "统计保护判断，不等于注册成功。错误数为零不能证明Redis健康。计数器随后端进程重启归零。",
+      "type": "stat",
+      "gridPos": {
+        "x": 8,
+        "y": 0,
+        "w": 8,
+        "h": 6
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "未知",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "campus_registration_protection_limit{job=\"campus-market\"}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "campus-prometheus"
+          },
+          "legendFormat": "{{instance}} · {{outcome}}"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "固定窗口长度（秒）",
+      "description": "统计保护判断，不等于注册成功。错误数为零不能证明Redis健康。计数器随后端进程重启归零。",
+      "type": "stat",
+      "gridPos": {
+        "x": 16,
+        "y": 0,
+        "w": 8,
+        "h": 6
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "未知",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "campus_registration_protection_window_seconds{job=\"campus-market\"}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "campus-prometheus"
+          },
+          "legendFormat": "{{instance}} · {{outcome}}"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "放行判断速率（不等于注册成功）",
+      "description": "统计保护判断，不等于注册成功。错误数为零不能证明Redis健康。计数器随后端进程重启归零。",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "noValue": "未知",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(campus_registration_decisions_total{job=\"campus-market\",outcome=\"allowed\"}[5m])",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "campus-prometheus"
+          },
+          "legendFormat": "{{instance}} · {{outcome}}"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "限流判断速率（普通429）",
+      "description": "统计保护判断，不等于注册成功。错误数为零不能证明Redis健康。计数器随后端进程重启归零。",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 6,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "noValue": "未知",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(campus_registration_decisions_total{job=\"campus-market\",outcome=\"limited\"}[5m])",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "campus-prometheus"
+          },
+          "legendFormat": "{{instance}} · {{outcome}}"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "保护故障判断速率（503）",
+      "description": "统计保护判断，不等于注册成功。错误数为零不能证明Redis健康。计数器随后端进程重启归零。",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "noValue": "未知",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(campus_registration_decisions_total{job=\"campus-market\",outcome=\"unavailable\"}[5m])",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "campus-prometheus"
+          },
+          "legendFormat": "{{instance}} · {{outcome}}"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "本进程累计判断次数（重启归零）",
+      "description": "统计保护判断，不等于注册成功。错误数为零不能证明Redis健康。计数器随后端进程重启归零。",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 14,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "未知",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "campus_registration_decisions_total{job=\"campus-market\"}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "campus-prometheus"
+          },
+          "legendFormat": "{{instance}} · {{outcome}}"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 8,
+      "title": "近5分钟保护故障判断次数",
+      "description": "统计保护判断，不等于注册成功。错误数为零不能证明Redis健康。计数器随后端进程重启归零。",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 22,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "未知",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "increase(campus_registration_decisions_total{job=\"campus-market\",outcome=\"unavailable\"}[5m])",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "campus-prometheus"
+          },
+          "legendFormat": "{{instance}} · {{outcome}}"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+[Unit]
+Description=Campus database and product image backup
+After=network-online.target
+[Service]
+Type=oneshot
+User=campus-backup
+Group=campus-market
+UMask=0077
+Environment=TZ=Asia/Shanghai
+ExecStart=/usr/bin/python3 /srv/campus-market/current/server/scripts/database_daily.py
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadOnlyPaths=/etc/campus-market/backup.cnf /srv/campus-market/uploads
+ReadWritePaths=/srv/campus-market/backups

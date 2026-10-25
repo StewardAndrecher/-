@@ -34,7 +34,7 @@ class OrderQueryIntegrationTest {
  @BeforeAll void hash(){hash=encoder.encode("Campus2026!");}
  @BeforeEach void fixtures()throws Exception {
   assertTrue(System.getenv("LESSON72_DB_URL").contains("/campus_lesson72_verify?"));
-  jdbc.update("DELETE FROM market_orders");jdbc.update("DELETE FROM product_comments");jdbc.update("DELETE FROM product_favorites");jdbc.update("DELETE FROM purchase_intents");jdbc.update("DELETE FROM products");jdbc.update("DELETE FROM login_sessions");jdbc.update("DELETE FROM users");
+  com.campus.market.support.FinancialFixtureCleanup.clear(jdbc);jdbc.update("DELETE FROM market_orders");jdbc.update("DELETE FROM product_comments");jdbc.update("DELETE FROM product_favorites");jdbc.update("DELETE FROM purchase_intents");jdbc.update("DELETE FROM products");jdbc.update("DELETE FROM login_sessions");jdbc.update("DELETE FROM users");
   seller=user("order_seller");buyer=user("order_buyer");other=user("order_other");
   sellerToken=token(seller,"order_seller");buyerToken=token(buyer,"order_buyer");otherToken=token(other,"order_other");
   product=repository.insert("订单教材","原始描述",3500,seller,null,"BOOK");

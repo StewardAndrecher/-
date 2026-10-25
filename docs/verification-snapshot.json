@@ -1,92 +1,72 @@
 {
-  "snapshot": "lesson82",
-  "verifiedAt": "2026-10-19",
-  "backend": {
-    "total": 843,
-    "suites": 59,
+  "asOf": "2026-10-25",
+  "scope": "local verification; not a public production deployment",
+  "backendFull": {
+    "tests": 1973,
+    "classes": 109,
+    "mode": "complete run plus affected NotificationIntegrationTest rerun",
+    "initialFixtureCleanupErrors": 9,
+    "affectedRerunTests": 35,
+    "passingClassesReused": 108,
+    "businessSourceChangedForRerun": false,
+    "explanation": "One private fixture cleanup call was added before deleting test orders. Complete-run reports and affected rerun were kept separately; this is not a fresh single all-green invocation."
+  },
+  "backendQuick": {
+    "tests": 148,
     "failures": 0,
     "errors": 0,
     "skipped": 0,
-    "origin": "lesson82 single full isolated run on macOS ARM64",
-    "durationSeconds": 600.98
+    "suites": 13
   },
-  "quick": {
-    "total": 73,
-    "suites": 8,
-    "failures": 0,
-    "errors": 0,
-    "skipped": 0,
-    "middlewareStarted": false
+  "backendToolTests": 77,
+  "clientDesktop": {
+    "tests": 1105,
+    "testFiles": 54,
+    "type": "Node logic tests; not end-to-end or native-device coverage"
   },
-  "backendToolTests": 32,
-  "monitoring": {
-    "snapshot": "lesson76/77",
-    "grafanaPanels": 15,
-    "alertRules": 8,
-    "ruleScenarios": 17,
-    "ruleAssertions": 168,
-    "expressionAssertions": 2,
-    "notificationChecks": 35,
-    "scope": "local loopback inbox; no external messaging"
+  "migrations": {
+    "files": 42,
+    "latestVersion": 136,
+    "tablesIncludingHistory": 45
   },
-  "apiDocs": {
-    "snapshot": "lesson80",
-    "businessOperations": 51,
-    "defaultEnabled": false,
-    "localOnly": true
+  "databaseDrill": {
+    "checks": 21,
+    "environmentSchemas": 3,
+    "purposeSpecificAccounts": 12,
+    "realBusinessDatabaseModified": false
   },
-  "frontend": {
-    "behaviorGroups": 47,
-    "behaviorEvidence": "lesson73",
-    "toolTests": 50,
-    "toolAndBuildEvidence": "lesson78",
-    "publicationRecheck": {
-      "behaviorGroups": 47,
-      "toolTests": 50,
-      "desktopRuleTests": 17,
-      "allThreeBuilds": true,
-      "date": "2026-10-19"
-    }
+  "recoveryDrill": {
+    "sqlSnapshotAndImages": true,
+    "freshIsolatedDatabase": true,
+    "sqlRoundTripEqual": true,
+    "imageHashesEqual": true,
+    "offsiteBackup": false,
+    "pointInTimeRecovery": false,
+    "productionBackupTimerEnabled": false
   },
-  "desktopTests": 17,
-  "builds": [
-    {
-      "platform": "h5",
-      "files": 53,
-      "pages": null,
-      "scopedFiles": 0
-    },
-    {
-      "platform": "mp-weixin",
-      "files": 151,
-      "pages": 14,
-      "scopedFiles": 28
-    },
-    {
-      "platform": "app",
-      "files": 32,
-      "pages": 14,
-      "scopedFiles": 0,
-      "installable": false
-    }
-  ],
-  "priorMqEvidence": {
-    "snapshot": "lesson74",
-    "normalTtlMs": 900000,
-    "testTtlMs": 200,
-    "singleNodeOnly": true
+  "buildScope": {
+    "h5Files": 194,
+    "mpWeixinFiles": 423,
+    "mpWeixinPages": 50,
+    "appResourceFiles": 99,
+    "appResourcePages": 50,
+    "apkOrIpaVerified": false,
+    "allCurrentWeixinPagesDeviceVerified": false,
+    "macArm64Packaged": true
   },
-  "githubActions": {
-    "workflow": ".github/workflows/backend-quick.yml",
-    "localStaticValidation": "actionlint PASS",
-    "cloudRun": "See repository Actions page for each published commit"
+  "externalServices": {
+    "realPaymentConnected": false,
+    "realSmtpConfigured": false,
+    "wechatOAuthConnected": false,
+    "publicBackendDeployed": false
   },
-  "boundaries": [
-    "quick cannot replace full integration regression",
-    "macOS full regression; Linux quick cloud status tracked separately",
-    "simulated payments only",
-    "App resources only; no APK/IPA or phone acceptance",
-    "single RabbitMQ node; no cluster HA or throughput claims",
-    "no public application deployment"
-  ]
+  "privacy": "Only counts and verification scope are public. Private reports, database backups, credentials, real rows and filesystem paths are excluded.",
+  "publicationChecks": {
+    "backendQuickTests": 148,
+    "backendPythonToolTests": 77,
+    "clientPythonToolTests": 14,
+    "clientDesktopTests": 1105,
+    "allPassed": true,
+    "freshLocalPublicSourceRun": true
+  }
 }

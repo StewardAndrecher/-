@@ -29,42 +29,41 @@ public class ImageService {
     private final ImageRepository repository;
     private final SessionService sessions;
     private final Path directory;
+    private final ImageObjectStore store;
+    private final ImageLibraryService library;
+    private final com.campus.market.governance.WriteGovernance governance;
 
     public ImageService(ImageRepository repository, SessionService sessions,
-                        @Value("${market.upload-dir:./data/uploads}") String directory) {
+                        @Value("${market.upload-dir:./data/uploads}") String directory,ImageObjectStore store,ImageLibraryService library,com.campus.market.governance.WriteGovernance governance) {
+        this.store=store;this.library=library;this.governance=governance;
         this.repository = repository; this.sessions = sessions;
         this.directory = Path.of(directory).toAbsolutePath().normalize();
     }
 
-    @Transactional
+    @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public ImageResponse upload(MultipartFile file, String authorization) {
         var user = sessions.currentUser(authorization);
+        governance.requireWritable(user.id(),"IMAGE");
         if (file == null || file.isEmpty()) throw new ImageValidationException("请选择图片");
         if (file.getSize() > MAX_BYTES) throw new ImageValidationException("图片不能超过5MB");
         BufferedImage image = decode(file);
         String id = UUID.randomUUID().toString();
-        Path target = directory.resolve(id + ".png");
-        try {
-            var output = new ByteArrayOutputStream();
-            if (!ImageIO.write(image, "png", output)) throw new IllegalStateException("无法编码图片");
-            if (output.size() > 10 * 1024 * 1024) throw new ImageValidationException("图片处理后过大，请选择更小图片");
-            Files.createDirectories(directory);
-            Files.write(target, output.toByteArray(), StandardOpenOption.CREATE_NEW);
-        } catch (IOException e) {
-            try { Files.deleteIfExists(target); }
-            catch (IOException cleanup) { e.addSuppressed(cleanup); }
-            throw new IllegalStateException("保存图片失败", e);
-        }
+        var output = new ByteArrayOutputStream();
+        try {if (!ImageIO.write(image,"png",output))throw new IllegalStateException("无法编码图片");}
+        catch(IOException ex){throw new ImageValidationException("图片处理失败");}
+        if(output.size()>10*1024*1024)throw new ImageValidationException("图片处理后过大");
+        byte[] bytes=output.toByteArray();library.reserve(user.id(),bytes.length);store.write(id,bytes);
         // 数据库事务回滚时，尽力清理刚写入的文件。
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override public void afterCompletion(int status) {
                 if (status != STATUS_COMMITTED) {
-                    try { Files.deleteIfExists(target); }
-                    catch (IOException e) { log.warn("回滚后清理图片失败", e); }
+                    try { store.delete(id); }
+                    catch (RuntimeException e) { log.warn("回滚后清理图片失败（{}）", e.getClass().getSimpleName()); }
                 }
             }
         });
         repository.insert(id, user.id(), image.getWidth(), image.getHeight());
+        library.record(id,bytes);
         return new ImageResponse(id, "/api/images/" + id, image.getWidth(), image.getHeight());
     }
 
@@ -98,7 +97,7 @@ public class ImageService {
     public String requireOwned(String id, long userId) {
         if (id == null || id.isBlank()) return null;
         if (!validId(id)) throw new ImageValidationException("图片ID格式不正确");
-        long ownerId = repository.findOwner(id)
+        long ownerId = repository.findOwnerForUpdate(id)
                 .orElseThrow(() -> new ImageValidationException("图片不存在，请重新上传"));
         if (ownerId != userId) throw new ProductForbiddenException("只能使用自己上传的图片");
         return id;
@@ -106,10 +105,9 @@ public class ImageService {
 
     public Resource read(String id) {
         if (!validId(id) || repository.findOwner(id).isEmpty()) throw new ImageNotFoundException();
-        Path file = directory.resolve(id + ".png");
-        if (!Files.isRegularFile(file)) throw new ImageNotFoundException();
-        return new FileSystemResource(file);
+        return store.read(id);
     }
+
     private boolean validId(String id) {
         return id != null && id.matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
     }

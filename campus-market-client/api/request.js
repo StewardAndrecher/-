@@ -1,15 +1,16 @@
-import { responseRequestId, withRequestReference } from '@/utils/request-reference.mjs'
+import { responseRequestId, withRequestReference, responseRetryAfter } from '@/utils/request-reference.mjs'
 import { getToken, clearSession } from '@/utils/session.js'
 
 import { API_BASE_URL, SERVER_CONFIG } from '@/config/server.js'
 export { API_BASE_URL }
 
 export class ApiError extends Error {
-  constructor(message, statusCode, code = '', requestId = '') {
+  constructor(message, statusCode, code = '', requestId = '', retryAfterSeconds = 0) {
     super(withRequestReference(message, statusCode, requestId))
     this.name = 'ApiError'
     this.statusCode = statusCode
     this.code = code
+    this.retryAfterSeconds = Number.isInteger(retryAfterSeconds) && retryAfterSeconds > 0 && retryAfterSeconds <= 86400 ? retryAfterSeconds : 0
     this.requestId = responseRequestId({ 'X-Request-Id': requestId })
   }
 }
@@ -38,7 +39,7 @@ export function request({ path, method = 'GET', data, auth = false }) {
         const message = typeof res.data?.message === 'string' && res.data.message.trim()
           ? res.data.message : `请求失败：HTTP ${res.statusCode}`
         const code = typeof res.data?.code === 'string' ? res.data.code : ''
-        reject(new ApiError(message, res.statusCode, code, responseRequestId(res.header)))
+        reject(new ApiError(message, res.statusCode, code, responseRequestId(res.header), [429,503].includes(res.statusCode) ? responseRetryAfter(res.header) : 0))
       },
       fail: () => reject(new ApiError('无法连接后端，请稍后重试', 0))
     })

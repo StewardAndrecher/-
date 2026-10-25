@@ -1,3 +1,4 @@
+import { productDetails } from './product-details.mjs'
 import { newCommentRequestId } from './comment-submissions.js'
 const PREFIX = 'campus-publication-pending-v1:'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
@@ -20,7 +21,7 @@ function snapshot(item, userId) {
   }
   return Object.freeze({ userId, requestId: item.requestId, createdAt: item.createdAt,
     product: Object.freeze({ title: p.title, description: p.description, priceInCents: p.priceInCents,
-      coverImageId: p.coverImageId, categoryCode: p.categoryCode }) })
+      coverImageId: p.coverImageId, categoryCode: p.categoryCode, ...(p.details != null ? { details: productDetails(p.details,p.coverImageId) } : {}) }) })
 }
 export function loadPendingPublication(userId) {
   const saved = uni.getStorageSync(key(userId))

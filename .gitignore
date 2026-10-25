@@ -26,3 +26,12 @@ __pycache__/
 scripts/.frontend-work/
 .test-results/
 *.bundle
+
+# Private credentials and operational state
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.cnf.private
+*.cookies
+*.har

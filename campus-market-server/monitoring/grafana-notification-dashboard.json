@@ -1,0 +1,406 @@
+{
+  "uid": "campus-notification-overview",
+  "title": "校园集市 · 通知投递监控",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": false,
+  "timezone": "browser",
+  "refresh": "15s",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "tags": [
+    "campus-market",
+    "notifications"
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "title": "通知投递配置（1开启／0关闭）",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "未知",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "campus_notification_delivery_enabled{job=\"campus-market\"}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "campus-prometheus"
+          },
+          "legendFormat": ""
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "数据库采样状态（1成功／0失败）",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "未知",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "campus_notification_outbox_poll_up{job=\"campus-market\"}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "campus-prometheus"
+          },
+          "legendFormat": ""
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "通知队列查询状态（1成功／0失败，关闭时未知）",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "未知",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "campus_notification_mq_broker_up{job=\"campus-market\"}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "campus-prometheus"
+          },
+          "legendFormat": ""
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "待投递任务",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "未知",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "campus_notification_outbox_pending{job=\"campus-market\"}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "campus-prometheus"
+          },
+          "legendFormat": ""
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "最老待投递时长",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "未知",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "campus_notification_outbox_oldest_seconds{job=\"campus-market\"}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "campus-prometheus"
+          },
+          "legendFormat": ""
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "未确认发布／已确认待入库",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "未知",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "campus_notification_outbox_unconfirmed{job=\"campus-market\"}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "campus-prometheus"
+          },
+          "legendFormat": ""
+        },
+        {
+          "refId": "B",
+          "expr": "campus_notification_outbox_awaiting_delivery{job=\"campus-market\"}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "campus-prometheus"
+          },
+          "legendFormat": ""
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "重试中／领取中（可能重叠）",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "未知",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "campus_notification_outbox_retrying{job=\"campus-market\"}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "campus-prometheus"
+          },
+          "legendFormat": ""
+        },
+        {
+          "refId": "B",
+          "expr": "campus_notification_outbox_leased{job=\"campus-market\"}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "campus-prometheus"
+          },
+          "legendFormat": ""
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "title": "队列可读取消息",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 24,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "未知",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "campus_notification_mq_queue_ready{job=\"campus-market\"}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "campus-prometheus"
+          },
+          "legendFormat": "{{queue}}"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "title": "队列消费者（parking通常为0）",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 32,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "未知",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "campus_notification_mq_queue_consumers{job=\"campus-market\"}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "campus-prometheus"
+          },
+          "legendFormat": "{{queue}}"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "title": "采样年龄（达到45秒视为过期）",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 32,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "未知",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "campus_notification_outbox_sample_age_seconds{job=\"campus-market\"}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "campus-prometheus"
+          },
+          "legendFormat": ""
+        },
+        {
+          "refId": "B",
+          "expr": "campus_notification_mq_sample_age_seconds{job=\"campus-market\"}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "campus-prometheus"
+          },
+          "legendFormat": ""
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    }
+  ]
+}

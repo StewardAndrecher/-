@@ -1,0 +1,24 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { createAdminLoader, validatePermissions, validateAdminDashboard } from '../utils/admin-access.mjs'
+const ordinary = { userId: 1, roles: ['USER'], permissions: [] }
+const admin = { userId: 1, roles: ['USER', 'ADMIN'], permissions: ['ADMIN_ACCESS'] }
+const dashboard = { identity: { user: { id: 1, username: 'role_alice', nickname: '管理员' }, role: 'ADMIN' }, overview: { users: 2, products: 3, onSaleProducts: 2, orders: 1 } }
+const deferred = () => { let resolve, reject; const promise = new Promise((a,b) => {resolve=a;reject=b});return {promise,resolve,reject} }
+function setup(fetchData, validate = validatePermissions) {
+  let identity = { userId: 1, token: 'token-a' }, state
+  const loader = createAdminLoader(fetchData, () => identity, validate, value => { state = value })
+  return { loader, get state() { return state }, identity(value) { identity = value } }
+}
+test('ordinary permissions never expose the admin entry',async()=>{const x=setup(async()=>ordinary);await x.loader.refresh();assert.deepEqual(x.state.data.permissions,[]);assert.equal(x.state.status,200)})
+test('admin permissions must match the role and current account',()=>{assert.equal(validatePermissions(admin,1),admin);for(const data of [{...admin,userId:2},{...admin,roles:['ADMIN']},{...ordinary,permissions:['ADMIN_ACCESS']},{...admin,permissions:['ADMIN_ACCESS','SUPERUSER']}])assert.throws(()=>validatePermissions(data,1))})
+test('dashboard validates identity and bounded integer counters',()=>{assert.equal(validateAdminDashboard(dashboard,1),dashboard);for(const data of [{...dashboard,identity:{...dashboard.identity,role:'USER'}},{...dashboard,overview:{...dashboard.overview,onSaleProducts:4}},{...dashboard,overview:{...dashboard.overview,users:-1}},{...dashboard,overview:{...dashboard.overview,orders:1.5}}])assert.throws(()=>validateAdminDashboard(data,1));assert.throws(()=>validateAdminDashboard(dashboard,2))})
+test('logged-out or hidden views clear previous privileges without fetching',async()=>{let calls=0;const x=setup(async()=>{calls++;return admin});await x.loader.refresh();assert(x.state.data);await x.loader.refresh(false);assert.equal(x.state.data,null);x.identity({});await x.loader.refresh();assert.equal(calls,1)})
+test('refresh removes stale dashboard while loading',async()=>{const pending=deferred();let calls=0;const x=setup(()=>++calls===1?Promise.resolve(admin):pending.promise);await x.loader.refresh();const job=x.loader.refresh();assert.equal(x.state.data,null);assert(x.state.busy);pending.resolve(ordinary);await job;assert.deepEqual(x.state.data.roles,['USER'])})
+test('old success cannot restore privileges after a newer refresh',async()=>{const a=deferred(),b=deferred();let calls=0;const x=setup(()=>++calls===1?a.promise:b.promise);const first=x.loader.refresh(),second=x.loader.refresh();b.resolve(ordinary);await second;a.resolve(admin);await first;assert.deepEqual(x.state.data.roles,['USER'])})
+test('old failure cannot overwrite a newer response',async()=>{const a=deferred(),b=deferred();let calls=0;const x=setup(()=>++calls===1?a.promise:b.promise);const first=x.loader.refresh(),second=x.loader.refresh();b.resolve(admin);await second;a.reject(new Error('old'));await first;assert.equal(x.state.status,200);assert.equal(x.state.error,'')})
+test('account or token changes during request invalidate the result',async()=>{for(const identity of [{userId:2,token:'token-a'},{userId:1,token:'token-b'},{}]){const pending=deferred(),x=setup(()=>pending.promise);const job=x.loader.refresh();x.identity(identity);pending.resolve(admin);await job;assert.equal(x.state.data,null);assert.equal(x.state.busy,false)}})
+test('403 clears old admin data and is explicitly represented',async()=>{let calls=0;const x=setup(async()=>{if(++calls===1)return admin;throw Object.assign(new Error('无管理权限'),{statusCode:403})});await x.loader.refresh();await x.loader.refresh();assert.equal(x.state.data,null);assert.equal(x.state.status,403);assert.equal(x.state.error,'无管理权限')})
+test('failed request can be retried without retaining old privilege data',async()=>{let calls=0;const x=setup(async()=>{if(++calls===1)throw new Error('网络不可用');return admin});await x.loader.refresh();assert.equal(x.state.status,0);assert.equal(x.state.data,null);await x.loader.refresh();assert.equal(x.state.status,200)})
+test('malformed successful response is rejected',async()=>{const x=setup(async()=>({...admin,userId:999}));await x.loader.refresh();assert.equal(x.state.data,null);assert(x.state.error);assert.notEqual(x.state.status,200)})
+test('dispose ignores a pending result and future refreshes',async()=>{const pending=deferred();let calls=0;const x=setup(()=>{calls++;return pending.promise});const job=x.loader.refresh();x.loader.dispose();pending.resolve(admin);await job;await x.loader.refresh();assert.equal(x.state.data,null);assert.equal(calls,1)})

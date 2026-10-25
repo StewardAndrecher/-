@@ -1,0 +1,100 @@
+{
+  "status": "passed",
+  "syntheticUsers": 10000,
+  "syntheticProducts": 100000,
+  "syntheticOrders": 100000,
+  "before": {
+    "buyerStatus": {
+      "serverMilliseconds": 1.59,
+      "resultRows": 20,
+      "plan": "-> Limit: 20 row(s)  (cost=2775 rows=20) (actual time=0.135..1.59 rows=20 loops=1)\n    -> Filter: (market_orders.`status` = 'COMPLETED')  (cost=2775 rows=18934) (actual time=0.135..1.59 rows=20 loops=1)\n        -> Index range scan on market_orders using idx_order_buyer_created over (buyer_id = 1), with index condition: (market_orders.buyer_id = 1)  (cost=2775 rows=49338) (actual time=0.135..1.53 rows=1901 loops=1)"
+    },
+    "sellerStatus": {
+      "serverMilliseconds": 1.38,
+      "resultRows": 20,
+      "plan": "-> Limit: 20 row(s)  (cost=2432 rows=20) (actual time=0.141..1.38 rows=20 loops=1)\n    -> Filter: (market_orders.`status` = 'COMPLETED')  (cost=2432 rows=15422) (actual time=0.141..1.38 rows=20 loops=1)\n        -> Index range scan on market_orders using idx_order_seller_created over (seller_id = 10000), with index condition: (market_orders.seller_id = 10000)  (cost=2432 rows=40186) (actual time=0.141..1.34 rows=1521 loops=1)"
+    },
+    "newestProducts": {
+      "serverMilliseconds": 0.0405,
+      "resultRows": 20,
+      "plan": "-> Limit: 20 row(s)  (cost=6642 rows=20) (actual time=0.0388..0.0405 rows=20 loops=1)\n    -> Index lookup on products using idx_products_status_created_id (status = 'ON_SALE')  (cost=6642 rows=48867) (actual time=0.0386..0.0397 rows=20 loops=1)"
+    },
+    "keywordCount": {
+      "serverMilliseconds": 51.7,
+      "resultRows": 1,
+      "plan": "-> Aggregate: count(0)  (cost=3550 rows=1) (actual time=51.7..51.7 rows=1 loops=1)\n    -> Filter: (products.title like '%高数%')  (cost=2299 rows=5429) (actual time=0.0423..51.6 rows=5000 loops=1)\n        -> Index lookup on products using idx_products_status_id (status = 'ON_SALE')  (cost=2299 rows=48867) (actual time=0.0389..47.7 rows=100000 loops=1)"
+    },
+    "buyerStatistics": {
+      "serverMilliseconds": 15.7,
+      "resultRows": 2,
+      "plan": "-> Table scan on <temporary>  (actual time=15.7..15.7 rows=2 loops=1)\n    -> Aggregate using temporary table  (actual time=15.7..15.7 rows=2 loops=1)\n        -> Index lookup on market_orders using idx_order_buyer_created (buyer_id = 1)  (cost=5824 rows=49338) (actual time=0.116..12.8 rows=25000 loops=1)"
+    }
+  },
+  "after": {
+    "buyerStatus": {
+      "serverMilliseconds": 0.0459,
+      "resultRows": 20,
+      "plan": "-> Limit: 20 row(s)  (cost=87.5 rows=20) (actual time=0.0434..0.0459 rows=20 loops=1)\n    -> Index lookup on market_orders using idx_order_buyer_status_created (buyer_id = 1, status = 'COMPLETED')  (cost=87.5 rows=250) (actual time=0.0431..0.0452 rows=20 loops=1)",
+      "p50Milliseconds": 0.0465,
+      "p95Milliseconds": 0.0531,
+      "candidateIndexUsed": true
+    },
+    "sellerStatus": {
+      "serverMilliseconds": 0.0475,
+      "resultRows": 20,
+      "plan": "-> Limit: 20 row(s)  (cost=87.5 rows=20) (actual time=0.0451..0.0475 rows=20 loops=1)\n    -> Index lookup on market_orders using idx_order_seller_status_created (seller_id = 10000, status = 'COMPLETED')  (cost=87.5 rows=250) (actual time=0.0449..0.0467 rows=20 loops=1)",
+      "p50Milliseconds": 0.0474,
+      "p95Milliseconds": 0.0491,
+      "candidateIndexUsed": true
+    },
+    "newestProducts": {
+      "serverMilliseconds": 0.0437,
+      "resultRows": 20,
+      "plan": "-> Limit: 20 row(s)  (cost=6642 rows=20) (actual time=0.0423..0.0437 rows=20 loops=1)\n    -> Index lookup on products using idx_products_status_created_id (status = 'ON_SALE')  (cost=6642 rows=48867) (actual time=0.0422..0.0431 rows=20 loops=1)",
+      "p50Milliseconds": 0.0437,
+      "p95Milliseconds": 0.0478
+    },
+    "keywordCount": {
+      "serverMilliseconds": 49.1,
+      "resultRows": 1,
+      "plan": "-> Aggregate: count(0)  (cost=3550 rows=1) (actual time=49.1..49.1 rows=1 loops=1)\n    -> Filter: (products.title like '%高数%')  (cost=2299 rows=5429) (actual time=0.0378..49 rows=5000 loops=1)\n        -> Index lookup on products using idx_products_status_id (status = 'ON_SALE')  (cost=2299 rows=48867) (actual time=0.0355..45.4 rows=100000 loops=1)",
+      "p50Milliseconds": 49.3,
+      "p95Milliseconds": 50.3
+    },
+    "buyerStatistics": {
+      "serverMilliseconds": 3.27,
+      "resultRows": 2,
+      "plan": "-> Group aggregate: count(0)  (cost=17140 rows=1) (actual time=3.24..3.27 rows=2 loops=1)\n    -> Covering index lookup on market_orders using idx_order_buyer_status_created (buyer_id = 1)  (cost=5728 rows=49528) (actual time=0.0209..2.15 rows=25000 loops=1)",
+      "p50Milliseconds": 3.35,
+      "p95Milliseconds": 3.52
+    }
+  },
+  "concurrentReadProbe": {
+    "workers": 8,
+    "queries": 80,
+    "elapsedSeconds": 0.184,
+    "p50MillisecondsIncludingClientStartup": 16.882,
+    "p95MillisecondsIncludingClientStartup": 23.964
+  },
+  "capacity": [
+    [
+      "market_orders",
+      "19447808",
+      "37912576",
+      "99056"
+    ],
+    [
+      "products",
+      "38354944",
+      "22659072",
+      "97734"
+    ]
+  ],
+  "limits": [
+    "Synthetic warm local SQL benchmark; not a production QPS/SLA claim",
+    "Contains-keyword count still scans matching rows; BTREE does not solve leading-wildcard search",
+    "Plan for search engine or separately validated Chinese fulltext semantics when real volume warrants it",
+    "Use existing cursor feed for long browsing; numbered deep OFFSET still costs proportional scanning"
+  ],
+  "realDatabaseTouched": false
+}

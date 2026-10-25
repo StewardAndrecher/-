@@ -12,3 +12,12 @@ export function withRequestReference(message, statusCode, requestId) {
   return Number.isInteger(statusCode) && statusCode >= 500 && statusCode <= 599 && id
     ? `${message}（请求编号：${id}）` : message
 }
+
+export function responseRetryAfter(headers) {
+ if(!headers||typeof headers!=='object'||Array.isArray(headers))return 0
+ const names=Object.keys(headers).filter(k=>k.toLowerCase()==='retry-after')
+ if(names.length!==1)return 0
+ const value=headers[names[0]],raw=typeof value==='number'?String(value):value
+ if(typeof raw!=='string'||! /^[1-9][0-9]{0,4}$/.test(raw)||Number(raw)>86400)return 0
+ return Number(raw)
+}

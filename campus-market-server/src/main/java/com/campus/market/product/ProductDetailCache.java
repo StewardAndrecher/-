@@ -26,7 +26,7 @@ public class ProductDetailCache {
 
     public ProductDetailCache(StringRedisTemplate redis,
             @Value("${market.product-cache.enabled:true}") boolean enabled,
-            @Value("${market.product-cache.prefix:campus:product-detail:v1:}") String prefix,
+            @Value("${market.product-cache.prefix:campus:product-detail:v2:}") String prefix,
             @Value("${market.product-cache.ttl-seconds:60}") long ttlSeconds) {
         if (!prefix.matches("[a-zA-Z0-9:_-]{1,80}") || ttlSeconds < 1 || ttlSeconds > 3600) {
             throw new IllegalArgumentException("商品缓存前缀或过期秒数配置无效");

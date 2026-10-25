@@ -62,3 +62,14 @@ Swagger UI使用打包资源，无外部在线校验器，不持久化授权。�
 ## 面试表述
 
 “为Spring Boot多端共用后端接入OpenAPI/Swagger UI，自动生成接口文档，区分匿名、可选登录和Bearer会话鉴权；针对幂等下单201/200、204空响应和同名分页模型建立契约回归测试。”
+
+
+第88课新增公开 `GET /api/products/feed`：只支持NEWEST、size 1～20，nextCursor绑定标准化关键词及分类；响应含records/hasMore/nextCursor/size，无total。错误游标、筛选不匹配、其他排序返回400；见 [CURSOR-PAGINATION.md](../CURSOR-PAGINATION.md)。
+
+第89课新增GET /api/users/me/permissions、GET /api/admin/me、GET /api/admin/overview。管理空间统一核验Bearer和实时ADMIN授权，401/403/no-store；普通注册不授予角色，见 [ADMIN-ACCESS.md](../ADMIN-ACCESS.md)。
+
+第90课增加5条商品审核和复核接口。权限、200幂等重放、409版本/状态冲突及证据快照见 [PRODUCT-MODERATION.md](../PRODUCT-MODERATION.md)。
+
+第91课新增6条商品举报API，状态与幂等约定见[PRODUCT-REPORTS.md](../PRODUCT-REPORTS.md)。
+
+第92课增加3条私有通知API，协议见[NOTIFICATIONS.md](../NOTIFICATIONS.md)。

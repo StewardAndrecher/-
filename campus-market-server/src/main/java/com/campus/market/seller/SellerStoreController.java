@@ -16,8 +16,9 @@ public class SellerStoreController {
             @PathVariable("id") long id,
             @RequestParam(name="page", defaultValue="1") int page,
             @RequestParam(name="size", defaultValue="5") int size,
-            @RequestParam(name="sort", defaultValue="NEWEST") String sort) {
+            @RequestParam(name="sort", defaultValue="NEWEST") String sort,
+            @RequestParam(name="category", defaultValue="") String category) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
-                .body(stores.getStore(id, page, size, sort));
+                .body(stores.getStore(id, page, size, sort, category));
     }
 }

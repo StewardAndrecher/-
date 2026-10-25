@@ -13,20 +13,26 @@ import java.util.List;
 @Service
 public class ProductService {
 
+    private final com.campus.market.governance.WriteGovernance governance;
+    private final com.campus.market.governance.ContentRules rules;
     private final ProductRepository productRepository;
     private final SessionService sessionService;
     private final ImageService imageService;
     private final ProductDetailCache detailCache;
     private final com.campus.market.order.OrderRepository orders;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public ProductService(ProductRepository productRepository, SessionService sessionService, ImageService imageService,
-                          ProductDetailCache detailCache, com.campus.market.order.OrderRepository orders) {
+                          ProductDetailCache detailCache, com.campus.market.order.OrderRepository orders, com.campus.market.governance.WriteGovernance governance, com.campus.market.governance.ContentRules rules) {
         this.productRepository = productRepository;
         this.sessionService = sessionService;
         this.imageService = imageService;
         this.detailCache = detailCache;
         this.orders = orders;
+        this.governance=governance; this.rules=rules;
     }
+
+    public ProductService(ProductRepository products,SessionService sessions,ImageService images,ProductDetailCache cache,com.campus.market.order.OrderRepository orders){this(products,sessions,images,cache,orders,null,null);}
 
     @Transactional(
             readOnly = true,
@@ -75,6 +81,15 @@ public class ProductService {
         );
     }
 
+    @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
+    public ProductPageResponse listProducts(int page,int size,String keyword,String category,String sort,String campus) {
+        if(campus==null||campus.isEmpty())return listProducts(page,size,keyword,category,sort);
+        validatePagination(page,size);
+        if(!ProductDetails.CAMPUSES.contains(campus))throw new InvalidProductException("校区筛选无效");
+        String search=keyword==null?"":keyword.strip();if(search.length()>50)throw new InvalidProductException("搜索关键词不能超过50个字符");
+        String code=category==null||category.isEmpty()?"":ProductCategory.parse(category).name();
+        return productRepository.campusPage(search,code,campus,ProductSort.parse(sort),page,size);
+    }
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public ProductPageResponse listProducts(int page, int size, String keyword) {
         return listProducts(page, size, keyword, "", "NEWEST");
@@ -85,6 +100,26 @@ public class ProductService {
         return listProducts(page, size, keyword, category, "NEWEST");
     }
 
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public ProductFeedResponse listProductFeed(int size, String keyword, String category, String sort, String token) {
+        if (size < 1 || size > 20) throw new InvalidProductException("每次加载数量必须在1～20之间");
+        String searchText = keyword == null ? "" : keyword.strip();
+        if (searchText.length() > 50) throw new InvalidProductException("搜索关键词不能超过50个字符");
+        String categoryCode = category == null || category.isEmpty() ? "" : ProductCategory.parse(category).name();
+        if (ProductSort.parse(sort) != ProductSort.NEWEST) throw new InvalidProductException("连续浏览暂只支持最新发布排序");
+        ProductFeedCursor cursor = ProductFeedCursor.decode(token, searchText, categoryCode);
+        List<ProductRepository.FeedRow> rows = productRepository.findFeed(searchText, categoryCode, cursor, size + 1);
+        boolean hasMore = rows.size() > size;
+        List<ProductRepository.FeedRow> visible = rows.subList(0, Math.min(size, rows.size()));
+        String next = null;
+        if (hasMore) {
+            // Anchor the last visible row, never the extra lookahead row, or one product would be skipped.
+            var last = visible.get(visible.size() - 1);
+            next = new ProductFeedCursor(last.epochSecond(), last.product().id()).encode(searchText, categoryCode);
+        }
+        return new ProductFeedResponse(visible.stream().map(ProductRepository.FeedRow::product).toList(), hasMore, next, size);
+    }
+
     @Transactional
     public ProductResponse createProduct(
             CreateProductRequest request,
@@ -92,9 +127,12 @@ public class ProductService {
     ) {
         // 卖家由后端核验会话后确定，不能接受前端指定的用户ID。
         var seller = sessionService.currentUser(authorization);
+        governance.requireWritable(seller.id(),"PRODUCT");
         var normalized = normalizeCreateProduct(request, seller.id());
+        rules.requireAllowed(normalized.title(),normalized.description(),normalized.details().handoverLocation());
         long id = productRepository.insert(normalized.title(), normalized.description(), normalized.priceInCents(),
                 seller.id(), normalized.coverImageId(), normalized.categoryCode());
+        productRepository.saveDetails(id,normalized.details());
         return productRepository.findById(id)
                 .orElseThrow(() -> new IllegalStateException("未能读取刚发布的商品"));
     }
@@ -105,12 +143,15 @@ public class ProductService {
         String category = request.categoryCode() == null ? ProductCategory.UNCLASSIFIED.name()
                 : ProductCategory.parse(request.categoryCode()).name();
         String coverId = imageService.requireOwned(request.coverImageId(), sellerId);
-        return new CreateProductRequest(fields.title(), fields.description(), fields.priceInCents(), coverId, category);
+        ProductDetails details=ProductDetails.validate(request.details(),coverId);
+        for(String image:details.imageIds())imageService.requireOwned(image,sellerId);
+        return new CreateProductRequest(fields.title(), fields.description(), fields.priceInCents(), coverId, category,details);
     }
 
     @Transactional
     public ProductResponse updateProduct(long id, UpdateProductRequest request, String authorization) {
         var user = sessionService.currentUser(authorization);
+        governance.requireWritable(user.id(),"PRODUCT");
         validateId(id);
         var product = productRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ProductNotFoundException("商品不存在"));
@@ -118,20 +159,24 @@ public class ProductService {
         if (product.status() == ProductStatus.SOLD) throw new ProductConflictException("商品已售出，不能再编辑");
         if (request == null) throw new InvalidProductException("商品信息不能为空");
         ProductFields fields = validateProduct(request.title(), request.description(), request.priceInCents());
+        rules.requireAllowed(fields.title(),fields.description(),request.details()==null?"":request.details().handoverLocation());
         requireVersion(product, request.version());
         String coverId = request.coverImageId() == null ? product.coverImageId()
                 : imageService.requireOwned(request.coverImageId(), user.id());
         String category = request.categoryCode() == null ? product.category().code()
                 : ProductCategory.parse(request.categoryCode()).name();
+        ProductDetails details=ProductDetails.validate(request.details()==null&&Objects.equals(coverId,product.coverImageId())?product.details():request.details(),coverId);
+        for(String image:details.imageIds())imageService.requireOwned(image,user.id());
         // 内容未变时也视为成功，避免依赖数据库驱动的更新行数配置。
         if (product.title().equals(fields.title()) && product.description().equals(fields.description())
                 && product.priceInCents() == fields.priceInCents()
                 && Objects.equals(product.coverImageId(), coverId)
-                && product.category().code().equals(category)) return product;
+                && product.category().code().equals(category) && product.details().equals(details)) return product;
         orders.requireUnreserved(id);
         int updated = productRepository.updateOwnedProduct(id, user.id(), fields.title(),
                 fields.description(), fields.priceInCents(), coverId, request.version(), category);
         if (updated != 1) throw new ProductConflictException("商品已被更新，请重新加载后再保存");
+        productRepository.saveDetails(id,details);
         detailCache.evictAfterCommit(id, product.version());
         return productRepository.findById(id)
                 .orElseThrow(() -> new IllegalStateException("未能读取刚修改的商品"));
@@ -234,6 +279,8 @@ public class ProductService {
     @Transactional
     public ProductResponse updateStatus(long id, UpdateProductStatusRequest request, String authorization) {
         var user = sessionService.currentUser(authorization);
+        governance.lockUser(user.id());
+        if(request!=null && request.status()==ProductStatus.ON_SALE)governance.requireWritable(user.id(),"PRODUCT");
         validateId(id);
         var product = productRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ProductNotFoundException("商品不存在"));
@@ -242,6 +289,8 @@ public class ProductService {
             throw new InvalidProductException("请指定商品状态");
         }
         requireVersion(product, request.version());
+        if(request.status()==ProductStatus.ON_SALE)rules.requireAllowed(product.title(),product.description(),product.details().handoverLocation());
+        if (request.status() != ProductStatus.OFF_SHELF) productRepository.requireNotModerated(id);
         // 当前版本的无变化请求不递增版本；旧版本即使状态相同也拒绝。
         if (product.status() == request.status()) return product;
         if (product.status() == ProductStatus.SOLD) throw new ProductConflictException("商品已售出，不能重新上架或下架");

@@ -1,6 +1,7 @@
 <template>
   <view class="page">
     <text class="title">账号资料</text>
+    <text class="message">离开此页会清除未保存的昵称草稿，返回后重新读取资料。</text>
     <view v-if="!currentUser" class="panel">
       <text class="message">请先登录后查看账号资料</text>
       <button type="primary" @click="openLogin">去登录</button>
@@ -27,15 +28,25 @@
       </button>
       <button :disabled="saving" @click="loadProfile()">刷新资料（保留草稿）</button>
     </view>
+    <AccountProfileCard v-if="currentUser" :active="pageVisible" />
+    <button @click="openPage('/pages/user/email')">邮箱绑定与邮件找回</button>
+    <button @click="openPage('/pages/user/content-status')">内容与账号状态</button>
+    <button @click="openPage('/pages/user/images')">图片空间与回收站</button>
+    <button v-if="currentUser" :disabled="loading || saving" @click="openRecovery">恢复码与找回密码设置</button>
+    <button v-if="currentUser" :disabled="loading || saving" @click="openPassword">修改密码</button>
+    <button v-if="currentUser" :disabled="loading || saving" @click="openSessions">登录会话管理</button>
     <button :disabled="loading || saving" @click="goHome">返回首页</button>
   </view>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { onShow, onUnload } from '@dcloudio/uni-app'
+import { openPage } from '@/composables/usePrivatePage.js'
+import { ref, watch } from 'vue'
+import AccountProfileCard from '@/components/AccountProfileCard.vue'
+import { onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import { getCurrentUser, updateMyNickname } from '@/api/user.js'
 import { currentUser, getToken, updateCurrentUser } from '@/utils/session.js'
+import { createPageTaskScope } from '@/utils/page-task-scope.mjs'
 const profile = ref(null)
 const draftNickname = ref('')
 const expectedNickname = ref('')
@@ -45,26 +56,40 @@ const conflict = ref(false)
 const uncertain = ref(false)
 const loadError = ref('')
 const message = ref('')
-let pageClosed = false
+const pageVisible = ref(false)
+const tasks = createPageTaskScope(() => ({ userId: currentUser.value?.id, token: getToken() }))
+
+function resetPrivateState() {
+  profile.value = null
+  draftNickname.value = ''; expectedNickname.value = ''
+  loading.value = false; saving.value = false
+  conflict.value = false; uncertain.value = false
+  loadError.value = ''; message.value = ''
+}
+watch(() => [currentUser.value?.id, getToken()], (next, previous) => {
+  // Updating the nickname in the same session must not invalidate its own save.
+  if (previous && next[0] === previous[0] && next[1] === previous[1]) return
+  tasks.invalidate(); resetPrivateState()
+  if (pageVisible.value && currentUser.value && getToken()) loadProfile()
+}, { flush: 'sync' })
 
 function matchesUser(user, owner) {
   return user && owner && user.id === owner.id && user.username === owner.username &&
     typeof user.nickname === 'string' && !!user.nickname.trim() &&
-    Array.from(user.nickname).length <= 30
+    Array.from(user.nickname).length <= 30 && !/[\u0000-\u001f\u007f-\u009f]/.test(user.nickname)
 }
 
 async function loadProfile(discardDraft = false) {
-  if (pageClosed || loading.value || saving.value) return
-  const token = getToken()
+  const ticket = tasks.capture()
+  if (!ticket || loading.value || saving.value) return
   const owner = currentUser.value
-  if (!token || !owner) { loadError.value = '请先登录后查看账号资料'; return }
   loading.value = true
   loadError.value = ''
   try {
     const user = await getCurrentUser()
-    if (pageClosed || token !== getToken()) return
+    if (!tasks.valid(ticket)) return
     if (!matchesUser(user, owner)) throw new Error('账号资料响应不匹配')
-    updateCurrentUser(user, token)
+    updateCurrentUser(user, ticket.token)
     const keepDraft = !discardDraft && profile.value?.id === user.id
     profile.value = user
     if (!keepDraft) {
@@ -78,19 +103,18 @@ async function loadProfile(discardDraft = false) {
       message.value = '昵称已在另一处更新，草稿仍保留。重新加载将替换草稿。'
     }
   } catch (error) {
-    if (!pageClosed && (token === getToken() || !getToken()))
-      loadError.value = error.statusCode === 401 ? '登录已失效，请重新登录' : error.message || '加载资料失败'
+    if (tasks.valid(ticket))
+      loadError.value = error?.statusCode === 401 ? '登录已失效，请重新登录' : error?.message || '加载资料失败'
   } finally {
-    loading.value = false
-    if (!pageClosed && token !== getToken() && getToken()) await loadProfile()
+    if (tasks.valid(ticket)) loading.value = false
   }
 }
 
 async function saveNickname() {
-  if (pageClosed || loading.value || saving.value || conflict.value || uncertain.value || !profile.value || loadError.value) return
-  const token = getToken()
+  const ticket = tasks.capture()
+  if (!ticket || loading.value || saving.value || conflict.value || uncertain.value || !profile.value || loadError.value) return
   const owner = currentUser.value
-  if (!token || !owner || profile.value.id !== owner.id) {
+  if (profile.value.id !== owner.id) {
     loadError.value = '请先登录后修改昵称'; return
   }
   const nickname = draftNickname.value.trim()
@@ -101,44 +125,66 @@ async function saveNickname() {
   saving.value = true
   try {
     const result = await updateMyNickname({ nickname, expectedNickname: expectedNickname.value })
-    if (pageClosed || token !== getToken()) return
+    if (!tasks.valid(ticket)) return
     if (!matchesUser(result, owner) || result.nickname !== nickname) {
       uncertain.value = true
       message.value = '修改结果格式异常，请重新加载资料确认'; return
     }
-    updateCurrentUser(result, token)
+    updateCurrentUser(result, ticket.token)
     profile.value = result
     draftNickname.value = result.nickname
     expectedNickname.value = result.nickname
     message.value = '昵称已保存'
   } catch (error) {
-    if (!pageClosed && (token === getToken() || !getToken())) {
-      if (error.statusCode === 409 && error.code === 'USER_PROFILE_CONFLICT') {
+    if (tasks.valid(ticket)) {
+      if (error?.statusCode === 409 && error?.code === 'USER_PROFILE_CONFLICT') {
         conflict.value = true
         message.value = '昵称已在另一处更新，本次未保存。草稿仍保留，请重新加载最新资料。'
-      } else if (error.statusCode === 401) loadError.value = '登录已失效，请重新登录'
-      else if (error.statusCode === 0 || error.statusCode >= 500) {
+      } else if (error?.statusCode === 401) loadError.value = '登录已失效，请重新登录'
+      else if (error?.statusCode === 0 || error?.statusCode >= 500) {
         uncertain.value = true
         message.value = '未收到可靠的修改结果，请重新加载资料确认后再操作。'
-      } else message.value = error.message || '保存昵称失败'
+      } else message.value = error?.message || '保存昵称失败'
     }
-  } finally { saving.value = false }
+  } finally { if (tasks.valid(ticket)) saving.value = false }
 }
 
-function openLogin() { uni.navigateTo({ url: '/pages/user/login' }) }
+function openRecovery(){if(tasks.capture() && !loading.value && !saving.value)openPage('/pages/user/recovery')}
+function openPassword() {
+  if (tasks.capture() && !loading.value && !saving.value) uni.navigateTo({ url: '/pages/user/password' })
+}
+function openSessions() {
+  if (tasks.capture() && !loading.value && !saving.value) uni.navigateTo({ url: '/pages/user/sessions' })
+}
+function openLogin() {
+  if (pageVisible.value && !currentUser.value && !loading.value && !saving.value)
+    uni.navigateTo({ url: '/pages/user/login' })
+}
 function goHome() {
-  if (loading.value || saving.value) return
+  if (!pageVisible.value || loading.value || saving.value) return
   const fail = () => uni.showToast({ title: '打开首页失败，请重试', icon: 'none' })
   if (getCurrentPages().length > 1) uni.navigateBack({ fail })
   else uni.reLaunch({ url: '/pages/index/index', fail })
 }
-onShow(() => loadProfile())
-onUnload(() => { pageClosed = true })
+onShow(() => {
+  if (!tasks.show()) return
+  pageVisible.value = true
+  resetPrivateState()
+  return loadProfile()
+})
+onHide(() => {
+  pageVisible.value = false
+  tasks.hide(); resetPrivateState()
+})
+onUnload(() => {
+  pageVisible.value = false
+  tasks.dispose(); resetPrivateState()
+})
 </script>
 
 <style scoped>
-.page { padding: 32rpx; min-height: 100vh; background: #f5f7fa; box-sizing: border-box; }
-.panel { padding: 32rpx; margin: 24rpx 0; background: #fff; border-radius: 20rpx; }
+.page { max-width:900px;margin:0 auto;padding:36px 24px 50px;min-height:100vh;background:#f5f8fd;color:#203c61;box-sizing:border-box; }
+.panel { padding:26px;margin:24px 0;background:#fff;border:1px solid #e4ecf7;border-radius:18px; }
 .title { display: block; font-size: 36rpx; font-weight: bold; }
 .label { display: block; margin: 28rpx 0 12rpx; }
 .field { height: 88rpx; padding: 0 20rpx; border: 1px solid #d9dfe8; border-radius: 12rpx; }

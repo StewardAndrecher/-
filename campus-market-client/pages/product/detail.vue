@@ -8,10 +8,12 @@
       {{ errorMessage }}
     </text>
 
-    <view v-else-if="product" class="card">
-      <image v-if="imageUrl(product.coverImageId)" class="cover" :src="imageUrl(product.coverImageId)" mode="aspectFit" />
+    <view v-else-if="product" class="card detail-card">
+      <view class="detail-visual"><ProductGallery :image-ids="product.details?.imageIds || []" :cover-image-id="product.coverImageId || ''" :category-code="product.category?.code || ''" :alt="product.title" /></view>
+      <view class="detail-copy"><text class="detail-eyebrow">CAMPUS FINDS · 校园好物</text>
       <text class="title">{{ product.title }}</text>
-      <text class="message">分类：{{ product.category?.name || '未分类' }}</text>
+      <view class="detail-tags"><text>{{ product.category?.name || '未分类' }}</text><text>{{ conditionName(product.details?.conditionCode) }}</text><text>{{ campusName(product.details?.campusCode) }}</text></view>
+      <text v-if="product.details?.handoverLocation" class="message">交接地点：{{ product.details.handoverLocation }}</text>
 
       <text class="price">
         ¥{{ (product.priceInCents / 100).toFixed(2) }}
@@ -29,16 +31,19 @@
       <text class="message">
         {{ product.seller ? '卖家：' + product.seller.nickname : '历史商品，卖家信息未登记' }}
       </text>
+      <view v-if="product.seller" class="seller-profile"><image v-if="imageUrl(product.seller.avatarImageId)" :src="imageUrl(product.seller.avatarImageId)" class="seller-avatar" mode="aspectFill" /><text v-if="product.seller.bio" class="message">{{ product.seller.bio }}</text></view>
       <button v-if="product.seller" size="mini" :disabled="commentsBusy" @click="openSeller">查看卖家主页</button>
       <text v-if="product.seller && currentUser?.id === product.seller.id" class="owner">
         这是你发布的商品
       </text>
       <button v-if="product.status !== 'SOLD' && product.seller && currentUser?.id === product.seller.id"
         type="primary" :disabled="commentsBusy" @click="openEdit">编辑商品</button>
+      </view>
     </view>
 
     <text v-if="product && historyMessage" class="message">{{ historyMessage }}</text>
 
+    <button v-if="product && !loading && !errorMessage && product.status === 'ON_SALE' && product.seller?.id !== currentUser?.id" :disabled="commentsBusy" @click="openReport">举报商品</button>
     <ProductShare v-if="product && !loading && !errorMessage" :product="product" :disabled="commentsBusy" />
 
     <ProductOrderAction v-if="product && !loading && !errorMessage" :key="'order-'+product.id" :product="product" :disabled="commentsBusy" :active="purchaseActive" @refresh="fetchProduct" @availability="orderAvailable = $event" />
@@ -64,6 +69,8 @@ import { getProduct } from '@/api/product.js'
 import { sellerStorePath } from '@/utils/seller-store.js'
 import { recordHistory } from '@/utils/browsing-history.js'
 import { currentUser, getToken } from '@/utils/session.js'
+import ProductGallery from '@/components/ProductGallery.vue'
+import { campusName, conditionName } from '@/utils/product-details.mjs'
 import { imageUrl } from '@/api/image.js'
 import FavoriteCount from '@/components/FavoriteCount.vue'
 import { isValidFavoriteCount } from '@/utils/product-popularity.js'
@@ -164,6 +171,7 @@ function openSeller() {
     fail: () => uni.showToast({ title: '打开卖家主页失败', icon: 'none' }) })
 }
 
+function openReport() { if (product.value) uni.navigateTo({ url: `/pages/report/create?id=${product.value.id}` }) }
 function openEdit() {
   if (commentsBusy.value || product.value?.status === 'SOLD') return
   if (!product.value?.seller || product.value.seller.id !== currentUser.value?.id) return
@@ -232,59 +240,23 @@ onUnload(() => {
 </script>
 
 <style scoped>
-.cover { width: 100%; height: 360rpx; margin-bottom: 24rpx; }
-.page {
-  padding: 32rpx;
-  min-height: 100vh;
-  background: #f5f7fa;
-  box-sizing: border-box;
-}
-
-.card {
-  padding: 32rpx;
-  background: #ffffff;
-  border-radius: 20rpx;
-  margin-bottom: 24rpx;
-}
-
-.title {
-  display: block;
-  font-size: 38rpx;
-  font-weight: bold;
-}
-
-.price {
-  display: block;
-  margin: 24rpx 0;
-  color: #e65b35;
-  font-size: 40rpx;
-}
-
-.description {
-  display: block;
-  white-space: pre-wrap;
-  overflow-wrap: break-word;
-  line-height: 1.7;
-  color: #444444;
-}
-
-.message,
-.error {
-  display: block;
-  margin: 24rpx 0;
-}
-
-.message {
-  color: #666666;
-}
-
-.owner { display: block; margin: 24rpx 0; color: #16834a; }
-
-.error {
-  color: #d93025;
-}
-
-button {
-  margin-top: 24rpx;
-}
+.detail-tags{display:flex;flex-wrap:wrap;gap:8px;margin:15px 0}.detail-tags text{padding:5px 10px;background:#edf3ff;color:#5b76a0;font-size:12px;border-radius:20px}.seller-profile{display:flex;gap:12px;align-items:center}.seller-avatar{width:38px;height:38px;border-radius:50%}
+.page { max-width: 1000px; padding: 28px; min-height: 100vh; background: #f5f7fc; box-sizing: border-box; font-size: 14px; }
+.card { background: #fff; border: 1px solid #e5ebf5; border-radius: 20px; overflow: hidden; margin-bottom: 24px; box-shadow: 0 6px 24px #243c6505; }
+.detail-card { display: grid; grid-template-columns: 44% 56%; }
+.detail-visual { min-height: 370px; }
+.detail-copy { padding: 32px; min-width: 0; }
+.detail-eyebrow { display: block; color: #90a3c1; font-size: 10px; letter-spacing: 1.5px; margin-bottom: 14px; }
+.title { display: block; font-size: 26px; line-height: 1.45; font-weight: 750; color: #1c3358; overflow-wrap: anywhere; }
+.price { display: block; margin: 20px 0; color: #de7944; font-size: 32px; line-height: 1.3; font-weight: 600; }
+.description { display: block; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.9; color: #687c97; font-size: 13px; padding: 14px 0; border-top: 1px solid #edf1f7; border-bottom: 1px solid #edf1f7; }
+.message, .error { display: block; margin: 12px 0; font-size: 12px; line-height: 1.8; }
+.message { color: #8b9bb1; }
+.owner { display: block; margin: 14px 0; color: #3c8b6d; font-size: 12px; }
+.error { color: #bd3e40; background: #fff1ef; padding: 14px; border-radius: 10px; }
+button { margin-top: 14px; }
+.detail-copy :deep(.count) { margin: 10px 0; font-size: 12px; color: #8b9bb1; }
+.page :deep(.heading) { font-size: 18px; color: #2b456c; }
+.page :deep(.summary), .page :deep(.hint) { font-size: 13px; line-height: 1.8; }
+@media (max-width: 650px) { .page { padding: 20px 16px; } .detail-card { display: block; } .detail-visual { height: 250px; min-height: 0; } .detail-copy { padding: 24px; } .title { font-size: 23px; } }
 </style>

@@ -12,7 +12,7 @@ public final class OrderModels {
  public record State(long productId,boolean available,Long myOrderId,String message){}
  public record Summary(long total,long pendingPayment,long paid,long delivered,long completed,
    long cancelled,long closedTimeout,long completedAmountInCents){}
- public record Page(List<Order> items,long total,int page,int size,int totalPages,String role,String status,Summary summary){}
+ public record Page(List<Order> items,long total,int page,int size,int totalPages,String role,String status,Long orderId,Summary summary){}
  public record Event(int sequence,String action,String fromStatus,String toStatus,String actorRole,
    Long actorId,String actorNickname,String occurredAt,String recordedAt){}
  public record Timeline(Order order,List<Event> events){}

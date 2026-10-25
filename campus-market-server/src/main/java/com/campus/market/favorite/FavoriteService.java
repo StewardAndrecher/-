@@ -55,12 +55,29 @@ public class FavoriteService {
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public FavoritePageResponse page(int page, int size, String authorization) {
+        return page(page, size, "ALL", authorization);
+    }
+
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public FavoritePageResponse page(int page, int size, String availability, String authorization) {
+        return page(page, size, availability, "", authorization);
+    }
+
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public FavoritePageResponse page(int page, int size, String availability, String keyword, String authorization) {
         long userId = sessions.currentUser(authorization).id();
         if (page < 1 || size < 1 || size > 50) {
             throw new InvalidProductException("页码须大于等于1，每页数量须在1～50之间");
         }
-        long total = favorites.count(userId);
-        return new FavoritePageResponse(favorites.findPage(userId, size, ((long) page - 1) * size),
+        if (availability == null || !List.of("ALL", "AVAILABLE", "UNAVAILABLE").contains(availability)) {
+            throw new InvalidProductException("收藏可用性须为ALL、AVAILABLE或UNAVAILABLE");
+        }
+        String searchText = keyword == null ? "" : keyword.strip();
+        if (searchText.length() > 50 || searchText.chars().anyMatch(Character::isISOControl)) {
+            throw new InvalidProductException("收藏搜索关键词不能超过50个字符或包含控制字符");
+        }
+        long total = favorites.count(userId, availability, searchText);
+        return new FavoritePageResponse(favorites.findPage(userId, size, ((long) page - 1) * size, availability, searchText),
                 total, page, size);
     }
 

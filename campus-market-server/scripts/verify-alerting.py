@@ -73,6 +73,9 @@ with tempfile.TemporaryDirectory(prefix='campus-alerting-check-') as directory:
   db=runtime/'notifications.sqlite3';saved=runtime/'saved.sqlite3';db.rename(saved);db.mkdir()
   try:request(receiverport,'/webhook',webhook,auth,503)
   finally:db.rmdir();saved.rename(db)
+  request(amport,'/api/v2/alerts',[alert('CampusRegistrationProtectionUnavailable','qa-registration','registration')])
+  wait(lambda:len(group('qa-registration'))==1)
+  check('registration classification delivered by actual Alertmanager',group('qa-registration')[0]['groupLabels']['component']=='registration')
   first=[alert(),alert('CampusMqNoConsumer')]
   request(amport,'/api/v2/alerts',first)
   wait(lambda:len(group('qa-one'))==1)

@@ -2,14 +2,14 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { createHash } from 'node:crypto'
 
-const ignored = new Set(['.git', '.idea', '.hbuilderx', 'node_modules', 'unpackage', '.DS_Store'])
+const ignored = new Set(['.git', '.idea', '.hbuilderx', 'node_modules', 'unpackage', '__pycache__', '.DS_Store'])
 export const sha256 = bytes => createHash('sha256').update(bytes).digest('hex')
 
 export async function fileInventory(root, { source = false, metadata = false } = {}) {
   const files = {}
   async function visit(directory, relative = '') {
     for (const entry of (await fs.readdir(directory, { withFileTypes: true })).sort((a,b) => a.name.localeCompare(b.name))) {
-      if ((source && ignored.has(entry.name)) || (metadata && relative === '' && ['build-meta.json', 'project.private.config.json', '.DS_Store'].includes(entry.name))) continue
+      if ((source && (ignored.has(entry.name) || entry.name === '.env' || entry.name.startsWith('.env.'))) || (metadata && relative === '' && ['build-meta.json', 'project.private.config.json', '.DS_Store'].includes(entry.name))) continue
       const name = relative ? `${relative}/${entry.name}` : entry.name
       if (entry.isSymbolicLink()) throw new Error(`不能把符号链接加入构建快照：${name}`)
       if (entry.isDirectory()) await visit(path.join(directory, entry.name), name)

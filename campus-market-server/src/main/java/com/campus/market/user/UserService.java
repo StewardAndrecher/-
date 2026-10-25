@@ -8,13 +8,15 @@ import java.nio.charset.StandardCharsets;
 
 @Service
 public class UserService {
+    private final com.campus.market.governance.ContentRules rules;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
     public UserService(
             UserRepository userRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder, com.campus.market.governance.ContentRules rules
     ) {
+        this.rules=rules;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
     }
@@ -44,6 +46,7 @@ public class UserService {
             throw new InvalidUserException("密码的UTF-8长度不能超过72字节");
         }
 
+        rules.requireAllowed(nickname);
         String passwordHash = passwordEncoder.encode(password);
         try {
             long id = userRepository.insert(username, passwordHash, nickname);

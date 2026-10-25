@@ -266,4 +266,33 @@ class LoginRateLimitIntegrationTest {
    assertThrows(LoginProtectionUnavailableException.class,()->limiter.begin("limit_student",address));
   assertEquals(List.of(),keys());
  }
+
+ @Autowired PasswordChangeService passwordChanges;
+ @Autowired SessionRepository sessionRepository;
+ MockHttpServletRequestBuilder passwordRequest(String token,String old) {
+  return post("/api/users/me/password").header("Authorization",token).contentType("application/json")
+   .content(json.writeValueAsString(Map.of("currentPassword",old,"newPassword","Replacement2027!")));
+ }
+ String passwordToken(){return "Bearer "+sessions.issueToken(new UserResponse(userId,"limit_student","限流同学")).accessToken();}
+ @Test void passwordChangeWrongAttemptsReach429WithoutChangingHashOrSessions()throws Exception {
+  String token=passwordToken();for(int i=0;i<5;i++)check(passwordRequest(token,"Wrong2026!"),403);
+  var r=mvc.perform(passwordRequest(token,"Campus2026!")).andReturn().getResponse();assertEquals(429,r.getStatus());assertNotNull(r.getHeader("Retry-After"));assertEquals("no-store",r.getHeader("Cache-Control"));
+  assertEquals(hash,jdbc.queryForObject("SELECT password_hash FROM users WHERE id=?",String.class,userId));assertEquals(userId,sessions.currentUser(token).id());
+ }
+ @Test void passwordChangeHasSeparateAccountBudgetFromLogin()throws Exception {
+  String token=passwordToken();for(int i=0;i<5;i++)check(passwordRequest(token,"Wrong2026!"),403);
+  check(login("limit_student","Campus2026!"),200);
+ }
+ @Test void unavailablePasswordProtectionReturns503BeforePasswordOrSessionWrites()throws Exception {
+  String token=passwordToken();var unavailable=custom(true,1,5,900,30,60);
+  try {var service=new PasswordChangeService(jdbc,sessions,sessionRepository,encoder,unavailable);
+   var local=MockMvcBuilders.standaloneSetup(new PasswordChangeController(service)).setControllerAdvice(new GlobalExceptionHandler()).build();
+   var r=local.perform(passwordRequest(token,"Campus2026!")).andReturn().getResponse();assertEquals(503,r.getStatus());assertEquals("5",r.getHeader("Retry-After"));assertEquals(hash,jdbc.queryForObject("SELECT password_hash FROM users WHERE id=?",String.class,userId));assertEquals(userId,sessions.currentUser(token).id());
+  }finally{unavailable.destroy();}
+ }
+ @Test void passwordProtectionFinalizationFailureCannotMutateCredentials() {
+  String token=passwordToken();var broken=spy(limiter);doThrow(new LoginProtectionUnavailableException()).when(broken).succeeded(any());
+  var service=new PasswordChangeService(jdbc,sessions,sessionRepository,encoder,broken);
+  assertThrows(LoginProtectionUnavailableException.class,()->service.change(token,new PasswordChangeRequest("Campus2026!","Replacement2027!"),"127.0.0.1"));assertEquals(hash,jdbc.queryForObject("SELECT password_hash FROM users WHERE id=?",String.class,userId));assertEquals(userId,sessions.currentUser(token).id());
+ }
 }

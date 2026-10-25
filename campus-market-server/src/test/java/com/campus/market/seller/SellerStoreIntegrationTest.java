@@ -54,7 +54,7 @@ class SellerStoreIntegrationTest {
         legacy=insert("历史无卖家物品",null,10,"ON_SALE","2026-01-04 10:00:00");
     }
     @Test void anonymousStoreExposesOnlyPublicSellerFieldsAndOnSaleItems()throws Exception {
-        var result=check(store(owner),200);assertEquals(2,result.size());assertEquals(2,result.get("seller").size());
+        var result=check(store(owner),200);assertEquals(2,result.size());assertEquals(5,result.get("seller").size());
         assertEquals(owner,result.get("seller").get("id").asLong());assertEquals("同学1",result.get("seller").get("nickname").asText());
         for(String field:List.of("username","password","passwordHash","accessToken","createdAt"))assertFalse(result.get("seller").has(field));
         assertEquals(List.of(second,first),ids(result));assertEquals(2,result.get("products").get("total").asInt());

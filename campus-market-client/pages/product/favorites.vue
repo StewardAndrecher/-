@@ -6,178 +6,116 @@
       <button type="primary" @click="openLogin">去登录</button>
     </view>
     <view v-else>
-      <text class="summary">{{ currentUser.nickname }}，共 {{ total }} 件收藏</text>
-      <button :disabled="loading || removingId > 0 || importing" @click="fetchFavorites()">刷新收藏</button>
+      <text v-if="state.page" class="summary">{{ currentUser.nickname }}，当前筛选共 {{ total }} 件收藏</text>
+      <text v-else class="summary">{{ loading ? '正在读取账号收藏…' : '请刷新读取账号收藏' }}</text>
+      <view class="search-bar">
+        <input v-model="draftKeyword" :disabled="busy" maxlength="50" placeholder="搜索收藏中的商品标题" confirm-type="search" @confirm="searchFavorites" />
+        <button size="mini" :disabled="busy" @click="searchFavorites">搜索收藏</button>
+        <button size="mini" :disabled="busy" @click="clearSearch">清空搜索</button>
+      </view>
+      <text class="summary">当前关键词：{{ state.keyword || '全部' }}。标题搜索只匹配可查看商品，已失效商品不参与标题搜索。</text>
+      <view class="filters">
+        <button v-for="option in FAVORITE_AVAILABILITY" :key="option.value" size="mini"
+          :type="state.availability === option.value ? 'primary' : 'default'"
+          :disabled="busy" @click="inbox.filter(option.value)">{{ option.label }}</button>
+      </view>
+      <text class="summary">当前筛选：{{ filterLabel }}。已失效商品仅保留编号；可查看不代表商品仍未被他人下单。</text>
+      <button :disabled="busy" @click="fetchFavorites()">刷新收藏</button>
+      <button :disabled="writesBlocked" @click="openBatch">批量管理全部收藏</button>
       <view v-if="legacyIds.length" class="panel">
-        <text>本机还有 {{ legacyIds.length }} 件旧收藏。点击后合并到当前账号：{{ currentUser.username }}。</text>
-        <button :disabled="loading || removingId > 0 || importing" @click="importLegacy">
+        <text>本机还有 {{ legacyIds.length }} 件旧收藏（导入不受当前筛选影响）。点击后合并到当前账号：{{ currentUser.username }}。</text>
+        <button :disabled="writesBlocked" @click="importLegacy">
           {{ importing ? '导入中…' : '导入本机旧收藏（每次最多20件）' }}
         </button>
       </view>
+      <text v-if="state.notice" class="summary">{{ state.notice }}</text>
       <text v-if="message" class="error">{{ message }}</text>
       <view v-for="item in records" :key="item.productId" class="panel">
         <view v-if="item.product" @click="openDetail(item.productId)">
           <image v-if="imageUrl(item.product.coverImageId)" class="cover" :src="imageUrl(item.product.coverImageId)" mode="aspectFit" />
           <text class="item-title">{{ item.product.title }}</text>
           <text class="summary">¥{{ (item.product.priceInCents / 100).toFixed(2) }}</text>
-        <FavoriteCount :value="item.product.favoriteCount" />
+          <FavoriteCount :value="item.product.favoriteCount" />
           <button size="mini">查看详情</button>
         </view>
         <text v-else class="summary">商品已下架或不可用（编号：{{ item.productId }}）</text>
-        <button :disabled="loading || removingId > 0 || importing" @click="removeFavorite(item.productId)">
+        <button :disabled="writesBlocked" @click="removeFavorite(item.productId)">
           {{ removingId === item.productId ? '取消中…' : '取消收藏' }}
         </button>
       </view>
-      <text v-if="!loading && !message && records.length === 0" class="summary">还没有收藏商品</text>
-      <view class="pagination">
-        <button size="mini" :disabled="loading || removingId > 0 || importing || page <= 1" @click="fetchFavorites(page - 1)">上一页</button>
+      <text v-if="!loading && !message && state.page && records.length === 0" class="summary">{{ state.availability === 'ALL' && !state.keyword ? '还没有收藏商品' : '当前筛选下没有收藏商品' }}</text>
+      <view v-if="state.page" class="pagination">
+        <button size="mini" :disabled="busy || page <= 1" @click="fetchFavorites(page - 1)">上一页</button>
         <text>第 {{ page }} / {{ totalPages }} 页</text>
-        <button size="mini" :disabled="loading || removingId > 0 || importing || page >= totalPages" @click="fetchFavorites(page + 1)">下一页</button>
+        <button size="mini" :disabled="busy || page >= totalPages" @click="fetchFavorites(page + 1)">下一页</button>
       </view>
     </view>
-    <button :disabled="loading || removingId > 0 || importing" @click="goHome">返回首页</button>
+    <button :disabled="busy" @click="goHome">返回首页</button>
   </view>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
-import { onShow, onUnload } from '@dcloudio/uni-app'
+import { computed, ref, watch } from 'vue'
+import { onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import { getFavorites, setProductFavorite } from '@/api/favorite.js'
 import FavoriteCount from '@/components/FavoriteCount.vue'
 import { imageUrl } from '@/api/image.js'
 import { currentUser, getToken } from '@/utils/session.js'
 import { loadLegacyFavoriteIds, markFavoriteImported } from '@/utils/favorites.js'
+import { createFavoriteInbox, FAVORITE_PAGE_SIZE, FAVORITE_AVAILABILITY } from '@/utils/favorite-inbox.mjs'
 
-const SIZE = 5
-const records = ref([])
-const total = ref(0)
-const page = ref(1)
-const loading = ref(false)
-const removingId = ref(0)
-const importing = ref(false)
-const message = ref('')
-const legacyIds = ref([])
-const totalPages = computed(() => Math.max(1, Math.ceil(total.value / SIZE)))
-let pageClosed = false
-let operation = 0
-
-watch(() => currentUser.value?.id, () => {
-  operation++
-  records.value = []; total.value = 0; page.value = 1; legacyIds.value = []
-  loading.value = false; removingId.value = 0; importing.value = false; message.value = ''
+const draftKeyword = ref('')
+const state = ref({ availability: 'ALL', keyword: '', page: null, legacyIds: [], loading: false, removingId: 0,
+  importing: false, error: '', notice: '', uncertain: false })
+const inbox = createFavoriteInbox({
+  identity: () => ({ userId: currentUser.value?.id, token: getToken() }),
+  load: getFavorites, setFavorite: setProductFavorite,
+  loadLegacy: loadLegacyFavoriteIds, markImported: markFavoriteImported,
+  notify: value => { state.value = value }
 })
+const filterLabel = computed(() => FAVORITE_AVAILABILITY.find(option => option.value === state.value.availability)?.label || '全部收藏')
+const records = computed(() => state.value.page?.records || [])
+const total = computed(() => state.value.page?.total || 0)
+const page = computed(() => state.value.page?.page || 1)
+const totalPages = computed(() => Math.max(1, Math.ceil(total.value / FAVORITE_PAGE_SIZE)))
+const loading = computed(() => state.value.loading)
+const removingId = computed(() => state.value.removingId)
+const importing = computed(() => state.value.importing)
+const legacyIds = computed(() => state.value.legacyIds)
+const message = computed(() => state.value.error)
+const busy = computed(() => loading.value || removingId.value > 0 || importing.value)
+const writesBlocked = computed(() => busy.value || state.value.uncertain || !state.value.page)
 
-function isValidItem(item) {
-  if (!item || !Number.isSafeInteger(item.productId) || item.productId <= 0) return false
-  if (item.product === null) return true
-  const p = item.product
-  return !!p && p.id === item.productId && p.status === 'ON_SALE' &&
-    typeof p.title === 'string' && typeof p.description === 'string' &&
-    Number.isSafeInteger(p.priceInCents) && p.priceInCents > 0 &&
-    Number.isSafeInteger(p.version) && p.version >= 0
+// saveSession replaces currentUser even for the same user, making token rotation observable.
+watch(() => [currentUser.value?.id, getToken()], () => { draftKeyword.value = ''; inbox.identityChanged() }, { flush: 'sync' })
+async function searchFavorites() {
+  if (busy.value) return
+  if (await inbox.search(draftKeyword.value)) draftKeyword.value = state.value.keyword
 }
-
-function readLegacy() {
-  if (!currentUser.value) return
-  try { legacyIds.value = loadLegacyFavoriteIds(currentUser.value.id) }
-  catch { message.value = '旧本机收藏读取失败，账号收藏仍可使用'; legacyIds.value = [] }
+async function clearSearch() {
+  if (busy.value) return
+  draftKeyword.value = ''
+  return inbox.search('')
 }
-
-async function fetchFavorites(targetPage = page.value) {
-  if (pageClosed || loading.value || removingId.value > 0 || importing.value) return
-  const token = getToken()
-  if (!token || !currentUser.value) return
-  const number = ++operation
-  loading.value = true; message.value = ''
-  let smallerPage = 0
-  try {
-    const data = await getFavorites({ page: targetPage, size: SIZE })
-    if (pageClosed || number !== operation || token !== getToken()) return
-    if (!data || !Array.isArray(data.records) || !data.records.every(isValidItem) ||
-        !Number.isSafeInteger(data.total) || data.total < data.records.length ||
-        data.page !== targetPage || data.size !== SIZE || data.records.length > SIZE) {
-      throw new Error('收藏列表格式不正确')
-    }
-    records.value = data.records; total.value = data.total; page.value = targetPage
-    const lastPage = Math.max(1, Math.ceil(data.total / SIZE))
-    if (targetPage > lastPage) smallerPage = lastPage
-  } catch (error) {
-    if (!pageClosed && number === operation && (token === getToken() || !getToken())) {
-      message.value = error.statusCode === 401 ? '登录已失效，请重新登录' : error.message || '加载收藏失败'
-    }
-  } finally {
-    if (number === operation) loading.value = false
-  }
-  if (smallerPage && !pageClosed && token === getToken()) await fetchFavorites(smallerPage)
+function fetchFavorites(target) { return inbox.refresh(target) }
+function removeFavorite(id) { return inbox.remove(id) }
+function importLegacy() { return inbox.importLegacy() }
+function openBatch() {
+  if (!writesBlocked.value && currentUser.value) uni.navigateTo({ url: '/pages/product/favorite-manage',
+    fail: () => uni.showToast({ title: '打开批量收藏管理失败', icon: 'none' }) })
 }
-
-async function removeFavorite(id) {
-  if (pageClosed || loading.value || removingId.value > 0 || importing.value) return
-  const token = getToken()
-  if (!token) { openLogin(); return }
-  const number = ++operation
-  removingId.value = id; message.value = ''
-  let removed = false
-  try {
-    const result = await setProductFavorite(id, false)
-    if (pageClosed || number !== operation || token !== getToken()) return
-    if (result?.productId !== id || result.favorite !== false) throw new Error('取消结果异常，请刷新确认')
-    removed = true
-  } catch (error) {
-    if (!pageClosed && number === operation && (token === getToken() || !getToken())) {
-      message.value = error.statusCode === 0 ? '未收到取消结果，请刷新确认后再操作' : error.message || '取消失败'
-    }
-  } finally {
-    if (number === operation) removingId.value = 0
-  }
-  if (removed && !pageClosed && token === getToken()) await fetchFavorites()
-}
-
-async function importLegacy() {
-  if (pageClosed || loading.value || removingId.value > 0 || importing.value) return
-  const token = getToken(), userId = currentUser.value?.id
-  if (!token || !userId) return
-  const number = ++operation
-  importing.value = true; message.value = ''
-  let imported = 0, unavailable = 0, failure = ''
-  try {
-    for (const id of legacyIds.value.slice(0, 20)) {
-      if (pageClosed || number !== operation || token !== getToken()) return
-      try {
-        const result = await setProductFavorite(id, true)
-        if (pageClosed || number !== operation || token !== getToken()) return
-        if (result?.productId !== id || result.favorite !== true) throw new Error('导入结果异常')
-        imported++
-        legacyIds.value = legacyIds.value.filter(value => value !== id)
-        markFavoriteImported(userId, id)
-      } catch (error) {
-        if (error.statusCode === 404) { unavailable++; continue }
-        failure = error.statusCode === 0 ? '网络结果未确认，可重新导入，重复请求不会新增记录' : error.message || '导入中断'
-        break
-      }
-    }
-  } finally {
-    if (number === operation) importing.value = false
-  }
-  if (!pageClosed && number === operation && token === getToken()) {
-    await fetchFavorites(1)
-    if (!pageClosed && token === getToken()) {
-      const refreshError = message.value
-      message.value = `已合并${imported}件，${unavailable}件不可用。` + (failure || refreshError || '原本机收藏保留。')
-    }
-  }
-}
-
 function openLogin() { uni.navigateTo({ url: '/pages/user/login' }) }
 function openDetail(id) {
+  if (busy.value) return
   uni.navigateTo({ url: `/pages/product/detail?id=${id}`, fail: () => uni.showToast({ title: '打开详情失败', icon: 'none' }) })
 }
 function goHome() {
   if (getCurrentPages().length > 1) uni.navigateBack()
   else uni.reLaunch({ url: '/pages/index/index' })
 }
-onShow(async () => { await fetchFavorites(); readLegacy() })
-onUnload(() => { pageClosed = true; operation++ })
+onShow(() => { draftKeyword.value = ''; return inbox.show() })
+onHide(() => { draftKeyword.value = ''; inbox.hide() })
+onUnload(() => { draftKeyword.value = ''; inbox.dispose() })
 </script>
 
 <style scoped>
@@ -189,6 +127,11 @@ onUnload(() => { pageClosed = true; operation++ })
 .summary { color: #666; }
 .error { color: #d93025; }
 .cover { width: 100%; height: 240rpx; }
+.search-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 12rpx; margin-top: 20rpx; }
+.search-bar input { flex: 1; min-width: 220rpx; height: 76rpx; padding: 0 16rpx; background: #fff; border: 1px solid #d9dfe8; border-radius: 12rpx; }
+.search-bar button { margin-left: 0; margin-right: 0; }
+.filters { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 20rpx; }
+.filters button { margin-left: 0; margin-right: 0; }
 .pagination { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }
 button { margin-top: 20rpx; }
 </style>

@@ -33,9 +33,21 @@ public class ProductController {
             @RequestParam(name = "size", defaultValue = "10") int size,
             @RequestParam(name = "keyword", defaultValue = "") String keyword,
             @RequestParam(name = "category", defaultValue = "") String category,
-            @RequestParam(name = "sort", defaultValue = "NEWEST") String sort
+            @RequestParam(name = "sort", defaultValue = "NEWEST") String sort,
+            @RequestParam(name = "campus", defaultValue = "") String campus
     ) {
-        return productService.listProducts(page, size, keyword, category, sort);
+        return productService.listProducts(page, size, keyword, category, sort,campus);
+    }
+
+    @GetMapping(value = "/feed", produces = "application/json;charset=UTF-8")
+    public ResponseEntity<ProductFeedResponse> listProductFeed(
+            @RequestParam(name = "size", defaultValue = "10") int size,
+            @RequestParam(name = "keyword", defaultValue = "") String keyword,
+            @RequestParam(name = "category", defaultValue = "") String category,
+            @RequestParam(name = "sort", defaultValue = "NEWEST") String sort,
+            @RequestParam(name = "cursor", defaultValue = "") String cursor) {
+        return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
+                .body(productService.listProductFeed(size, keyword, category, sort, cursor));
     }
 
     @GetMapping(value = "/{id}", produces = "application/json;charset=UTF-8")

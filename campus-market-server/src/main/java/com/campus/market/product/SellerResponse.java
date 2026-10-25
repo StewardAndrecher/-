@@ -1,5 +1,5 @@
 package com.campus.market.product;
-
-// 公开商品接口只返回展示所需的卖家资料。
-public record SellerResponse(long id, String nickname) {
+// Only explicitly public profile data is exposed, never recovery data or login credentials.
+public record SellerResponse(long id,String nickname,String avatarImageId,String bio,String campusCode) {
+ public SellerResponse(long id,String nickname){this(id,nickname,null,"","UNSPECIFIED");}
 }

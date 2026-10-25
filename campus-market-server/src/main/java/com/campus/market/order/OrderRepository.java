@@ -10,7 +10,11 @@ import static com.campus.market.order.OrderModels.*;
 @Repository
 public class OrderRepository {
  private final JdbcTemplate jdbc;
- public OrderRepository(JdbcTemplate jdbc){this.jdbc=jdbc;}
+ private final com.campus.market.notification.NotificationEvents notifications;
+ public void requireNoActiveRefund(long orderId) {
+  if(jdbc.queryForObject("SELECT COUNT(*) FROM order_refunds WHERE order_id=? AND status IN ('REQUESTED','APPROVED')",Long.class,orderId)>0)throw new OrderException(409,"REFUND_IN_PROGRESS","订单存在处理中的退款申请，请先查看退款售后进度");
+ }
+ public OrderRepository(JdbcTemplate jdbc,com.campus.market.notification.NotificationEvents notifications){this.jdbc=jdbc;this.notifications=notifications;}
  public boolean hasActive(long productId){return jdbc.queryForObject("SELECT COUNT(*) FROM market_orders WHERE active_product_id=?",Long.class,productId)>0;}
  public void requireUnreserved(long productId){if(!jdbc.queryForList("SELECT id FROM market_orders WHERE active_product_id=? FOR UPDATE",Long.class,productId).isEmpty())throw OrderException.conflict("商品已有有效订单，暂不能修改或继续发起交易；未付款订单取消或超时后释放");}
  Stored request(long buyerId,String requestId){return stored("SELECT * FROM market_orders WHERE buyer_id=? AND request_id=?",buyerId,requestId);}
@@ -74,10 +78,26 @@ public class OrderRepository {
    return new Summary(rs.getLong("total"),rs.getLong("pending_payment"),rs.getLong("paid"),rs.getLong("delivered"),rs.getLong("completed"),rs.getLong("cancelled"),rs.getLong("closed_timeout"),amount);
   },userId);
  }
- List<Order> page(long userId,boolean seller,String status,int size,long offset) {
-  String sql="SELECT * FROM market_orders WHERE "+(seller?"seller_id":"buyer_id")+"=?";
-  if("ALL".equals(status))return jdbc.query(sql+" ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?",this::map,userId,size,offset);
-  return jdbc.query(sql+" AND status=? ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?",this::map,userId,status,size,offset);
+ private String filteredSql(long userId,boolean seller,String status,Long exact,java.util.List<Object> params) {
+  params.add(userId);String where=" WHERE "+(seller?"seller_id":"buyer_id")+"=?";
+  if(!"ALL".equals(status)){where+=" AND status=?";params.add(status);}
+  if(exact!=null){where+=" AND id=?";params.add(exact);}
+  return where;
+ }
+ long count(long userId,boolean seller,String status,long exact) {
+  var params=new java.util.ArrayList<Object>();String where=filteredSql(userId,seller,status,exact,params);
+  return jdbc.queryForObject("SELECT COUNT(*) FROM market_orders"+where,Long.class,params.toArray());
+ }
+ List<Order> page(long userId,boolean seller,String status,int size,long offset) {return page(userId,seller,status,null,size,offset);}
+ List<Order> page(long userId,boolean seller,String status,Long exact,int size,long offset) {
+  var params=new java.util.ArrayList<Object>();String where=filteredSql(userId,seller,status,exact,params);
+  params.add(size);params.add(offset);
+  return jdbc.query("SELECT * FROM market_orders"+where+" ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?",this::map,params.toArray());
+ }
+ List<OrderExportModels.Row> exportRows(long userId,boolean seller,String status,Long exact,int limit) {
+  var params=new java.util.ArrayList<Object>();String where=filteredSql(userId,seller,status,exact,params);params.add(limit);
+  return jdbc.query("SELECT id,product_title_snapshot,price_in_cents_snapshot,status,created_at FROM market_orders"+where+" ORDER BY created_at DESC,id DESC LIMIT ?",
+   (rs,n)->new OrderExportModels.Row(rs.getLong("id"),rs.getString("product_title_snapshot"),rs.getLong("price_in_cents_snapshot"),rs.getString("status"),rs.getTimestamp("created_at").toLocalDateTime().toString()),params.toArray());
  }
  /** 只由已持有商品/订单锁的业务事务追加。应用没有修改或删除事件的接口。 */
  void append(long orderId,String action,String from,String to,String role,Long actorId,String nickname) {
@@ -89,6 +109,7 @@ public class OrderRepository {
   String scope=switch(role){case "BUYER"->"buyer_id=?";case "SELLER"->"seller_id=?";case "SYSTEM"->"? IS NULL";default->throw new IllegalArgumentException("不支持的操作角色");};
   int changed=jdbc.update("INSERT INTO order_events(order_id,event_no,action,from_status,to_status,actor_role,actor_id,actor_nickname,occurred_at) SELECT id,?,?,?,?,?,?,?,"+timeColumn+" FROM market_orders WHERE id=? AND status=? AND "+scope,sequence,action,from,to,role,actorId,nickname,orderId,to,actorId);
   if(changed!=1)throw new IllegalStateException("订单操作记录写入失败");
+  var order=read(orderId);notifications.order(orderId,sequence,order.buyer().id(),order.seller().id(),action,order.productTitleSnapshot());
  }
  List<Event> events(long orderId) {
   return jdbc.query("SELECT * FROM order_events WHERE order_id=? ORDER BY event_no",(rs,n)->new Event(rs.getInt("event_no"),rs.getString("action"),rs.getString("from_status"),rs.getString("to_status"),rs.getString("actor_role"),rs.getObject("actor_id",Long.class),rs.getString("actor_nickname"),time(rs,"occurred_at"),time(rs,"recorded_at")),orderId);

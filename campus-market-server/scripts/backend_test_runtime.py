@@ -1,7 +1,7 @@
 # coding: utf-8
 """Private schema/service orchestration, invoked only after the command's preflight checks."""
 from pathlib import Path
-import os,shutil,socket,subprocess,time,sys
+import os,shutil,socket,subprocess,time,sys,re
 from backend_test_support import collect_results,isolated_environment,snapshot_source,run_maven,stop_owned_group,preserve_runtime_logs
 from test_mq_runtime import TestRabbit
 
@@ -260,6 +260,8 @@ def execute(options,project,result_dir,root,tools,expected):
                 with socket.create_connection(('127.0.0.1',login_redis_port),timeout=.3):break
             except OSError:time.sleep(.1)
         else:raise RuntimeError('Isolated login Redis did not start')
+        r=sql('CREATE DATABASE campus_lesson85_verify CHARACTER SET utf8mb4;')
+        if r.returncode:raise RuntimeError(r.stderr)
         mq_runtime=TestRabbit(root/'rabbitmq',env=clean_env)
         mq_env=mq_runtime.start()
         env=clean_env.copy()
@@ -305,6 +307,7 @@ def execute(options,project,result_dir,root,tools,expected):
         env['LESSON62_DB_URL']=env['LESSON24_DB_URL'].replace('campus_lesson24_verify','campus_lesson62_verify')
         env['LESSON63_DB_URL']=env['LESSON24_DB_URL'].replace('campus_lesson24_verify','campus_lesson63_verify')
         env['LESSON66_DB_URL']=env['LESSON24_DB_URL'].replace('campus_lesson24_verify','campus_lesson66_verify')
+        env['LESSON85_DB_URL']=env['LESSON24_DB_URL'].replace('campus_lesson24_verify','campus_lesson85_verify')
         env['LESSON75_DB_URL']=env['LESSON24_DB_URL'].replace('campus_lesson24_verify','campus_lesson75_verify')
         env['LESSON74_DB_URL']=env['LESSON24_DB_URL'].replace('campus_lesson24_verify','campus_lesson74_verify')
         env['LESSON73_DB_URL']=env['LESSON24_DB_URL'].replace('campus_lesson24_verify','campus_lesson73_verify')
@@ -318,7 +321,41 @@ def execute(options,project,result_dir,root,tools,expected):
         env['LESSON64_DB_URL']=env['LESSON24_DB_URL'].replace('campus_lesson24_verify','campus_lesson64_verify')
         env['LESSON24_UPLOAD_DIR']=str(root/'uploads')
         env['APP_LOG_FILE']=str(root/'logs/server.log')
-        command=[tools['mvn'],*(['-o'] if options.offline else []),'-q','-f',str(build/'pom.xml'),'-Dtest='+','.join(sorted(expected)),'clean','test']
+        # V90 is additive. Legacy business fixtures need the new status guard tables too;
+        # migration tests still create their own frozen/upgrade schemas independently.
+        moderation_sql=Path('sql/lesson90-product-moderation.sql').read_text().replace('USE campus_market;','')
+        fixture_schemas=sorted({value.split('/',3)[3].split('?',1)[0] for key,value in env.items()
+                                if key.startswith('LESSON') and key.endswith('_DB_URL')})
+        for fixture_schema in fixture_schemas:
+            if not re.fullmatch(r'campus_lesson[0-9]+_verify',fixture_schema):raise RuntimeError('Unexpected private fixture schema')
+            ready=sql("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='"+fixture_schema+"' AND table_name='products';")
+            if ready.returncode:raise RuntimeError('Cannot inspect private fixture schema')
+            if ready.stdout.strip()=='1':
+                applied=sql('USE '+fixture_schema+';\n'+moderation_sql)
+                if applied.returncode:raise RuntimeError('Cannot extend private fixture with moderation tables: '+applied.stderr[-500:])
+                applied=sql('USE '+fixture_schema+';\n'+Path('sql/lesson92-notifications.sql').read_text())
+                if applied.returncode:raise RuntimeError('Cannot extend private fixture with notification tables: '+applied.stderr[-500:])
+        for fixture_schema in fixture_schemas:
+            existing=sql("SELECT table_name FROM information_schema.tables WHERE table_schema='"+fixture_schema+"';")
+            if existing.returncode:raise RuntimeError('Cannot inspect isolated fixture tables')
+            tables=set(existing.stdout.split())
+            if 'products' not in tables:continue
+            for filename in ['lesson128-product-details-and-profiles.sql','lesson129-order-refund-applications.sql','lesson130-verified-email-binding.sql','lesson131-content-and-abuse-governance.sql','lesson132-image-storage-management.sql','lesson133-payment-financial-evidence.sql','lesson134-external-identity-and-media-indexes.sql','lesson135-bounded-data-retention.sql','lesson136-order-query-indexes.sql']:
+                if filename.startswith('lesson132') and 'product_images' not in tables:continue
+                if filename.startswith('lesson133') and 'market_orders' not in tables:continue
+                if filename.startswith('lesson129') and 'market_orders' not in tables:continue
+                text=Path('sql',filename).read_text().replace('USE campus_market;','')
+                text=re.sub(r'--[^\n]*','',text)
+                for statement in text.split(';'):
+                    statement=statement.strip()
+                    if not statement:continue
+                    altered=re.match(r'ALTER TABLE ([a-z_]+)',statement)
+                    if altered and altered.group(1) not in tables:continue
+                    applied=sql('USE '+fixture_schema+';\n'+statement+';')
+                    if applied.returncode:raise RuntimeError('Cannot extend private fixture: '+applied.stderr[-600:])
+                    created=re.match(r'CREATE TABLE(?: IF NOT EXISTS)? ([a-z_]+)',statement,re.I)
+                    if created:tables.add(created.group(1))
+        command=[tools['mvn'],*(['-o'] if options.offline else []),'-q','-f',str(build/'pom.xml'),'-Dmarket.governance.rate-enabled=false','-Dtest='+','.join(sorted(expected)),'clean','test']
         exit_code=run_maven(command,env,result_dir/'maven.log')
         reports=build/'target/surefire-reports'
         if reports.is_dir():

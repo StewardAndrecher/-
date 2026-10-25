@@ -1,3 +1,4 @@
+HELP.md
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
@@ -58,3 +59,6 @@ data/alerting/
 /data/test-results/
 __pycache__/
 *.pyc
+
+# 本机发布包、构建日志、JUnit及运行摘要
+/data/releases/

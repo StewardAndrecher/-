@@ -1,0 +1,68 @@
+# 第94课：通知指标、积压和队列告警；45秒新鲜度配合15秒默认采样。
+groups:
+  - name: campus-market-notifications
+    interval: 5s
+    rules:
+      - alert: CampusNotificationMetricsMissing
+        expr: "(up{job=\"campus-market\"} == 1) unless on(job,instance) ((campus_notification_delivery_enabled{job=\"campus-market\"} == 0) or (campus_notification_delivery_enabled{job=\"campus-market\"} == 1))"
+        for: 1m
+        labels:
+          severity: "warning"
+          component: "notification"
+        annotations:
+          summary: "通知指标缺失或无效"
+          description: "应用可采集，但通知配置指标连续1分钟缺失或无效。检查通知监控版本和功能配置。"
+      - alert: CampusNotificationSamplingUnavailable
+        expr: "((up{job=\"campus-market\"} == 1) and on(job,instance) ((campus_notification_delivery_enabled{job=\"campus-market\"} == 0) or (campus_notification_delivery_enabled{job=\"campus-market\"} == 1))) unless on(job,instance) ((campus_notification_outbox_poll_up{job=\"campus-market\"} == 1) and on(job,instance) (campus_notification_outbox_sample_age_seconds{job=\"campus-market\"} < 45) and on(job,instance) (up{job=\"campus-market\"} == 1))"
+        for: 30s
+        labels:
+          severity: "warning"
+          component: "notification"
+        annotations:
+          summary: "通知任务采样失败或过期"
+          description: "通知数据库采样连续30秒失败、缺失或年龄达到45秒。积压未知不能当成零，检查数据库和采样线程。"
+      - alert: CampusNotificationBacklog
+        expr: "(campus_notification_outbox_pending{job=\"campus-market\"} > 0) and on(job,instance) (campus_notification_outbox_oldest_seconds{job=\"campus-market\"} >= 60) and on(job,instance) ((campus_notification_outbox_poll_up{job=\"campus-market\"} == 1) and on(job,instance) (campus_notification_outbox_sample_age_seconds{job=\"campus-market\"} < 45) and on(job,instance) (up{job=\"campus-market\"} == 1)) and on(job,instance) (campus_notification_delivery_enabled{job=\"campus-market\"} == 1)"
+        for: 1m
+        labels:
+          severity: "warning"
+          component: "notification"
+        annotations:
+          summary: "通知任务持续积压"
+          description: "通知投递已开启，存在等待至少60秒的任务且持续1分钟。检查发布确认、消费者及租约重试。"
+      - alert: CampusNotificationDeliveryDisabled
+        expr: "(campus_notification_delivery_enabled{job=\"campus-market\"} == 0) and on(job,instance) (campus_notification_outbox_pending{job=\"campus-market\"} > 0) and on(job,instance) ((campus_notification_outbox_poll_up{job=\"campus-market\"} == 1) and on(job,instance) (campus_notification_outbox_sample_age_seconds{job=\"campus-market\"} < 45) and on(job,instance) (up{job=\"campus-market\"} == 1))"
+        for: 1m
+        labels:
+          severity: "warning"
+          component: "notification"
+        annotations:
+          summary: "通知投递关闭且有待处理任务"
+          description: "通知任务仍保留在数据库，但投递开关关闭并持续1分钟。确认维护计划或恢复投递配置。"
+      - alert: CampusNotificationBrokerUnavailable
+        expr: "((campus_notification_delivery_enabled{job=\"campus-market\"} == 1) and on(job,instance) (up{job=\"campus-market\"} == 1)) unless on(job,instance) ((campus_notification_mq_broker_up{job=\"campus-market\"} == 1) and on(job,instance) (campus_notification_mq_sample_age_seconds{job=\"campus-market\"} < 45) and on(job,instance) (up{job=\"campus-market\"} == 1) and on(job,instance) (campus_notification_delivery_enabled{job=\"campus-market\"} == 1))"
+        for: 30s
+        labels:
+          severity: "critical"
+          component: "notification"
+        annotations:
+          summary: "通知队列采样失败或过期"
+          description: "通知MQ已开启，但工作和parking队列无法完整读取或快照年龄达到45秒，持续30秒。检查RabbitMQ连接、权限及采样线程。"
+      - alert: CampusNotificationParkingBacklog
+        expr: "(campus_notification_mq_queue_ready{job=\"campus-market\",queue=\"parking\"} > 0) and on(job,instance) ((campus_notification_mq_broker_up{job=\"campus-market\"} == 1) and on(job,instance) (campus_notification_mq_sample_age_seconds{job=\"campus-market\"} < 45) and on(job,instance) (up{job=\"campus-market\"} == 1) and on(job,instance) (campus_notification_delivery_enabled{job=\"campus-market\"} == 1))"
+        for: 30s
+        labels:
+          severity: "warning"
+          component: "notification"
+        annotations:
+          summary: "通知失败保留队列有积压"
+          description: "通知parking队列可读取消息持续30秒大于零。先排查消息与消费错误，勿直接清空或盲目重投。"
+      - alert: CampusNotificationNoConsumer
+        expr: "(campus_notification_mq_queue_consumers{job=\"campus-market\",queue=\"work\"} == 0) and on(job,instance) ((campus_notification_mq_broker_up{job=\"campus-market\"} == 1) and on(job,instance) (campus_notification_mq_sample_age_seconds{job=\"campus-market\"} < 45) and on(job,instance) (up{job=\"campus-market\"} == 1) and on(job,instance) (campus_notification_delivery_enabled{job=\"campus-market\"} == 1))"
+        for: 30s
+        labels:
+          severity: "critical"
+          component: "notification"
+        annotations:
+          summary: "通知工作队列没有消费者"
+          description: "通知队列采样正常，但工作队列消费者连续30秒为零。检查通知监听器启动和连接恢复。"

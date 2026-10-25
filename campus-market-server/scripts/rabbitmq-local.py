@@ -3,7 +3,7 @@
 from pathlib import Path
 import argparse,json,os,secrets,shutil,socket,subprocess,time,sys,xml.etree.ElementTree as ET
 root=Path(__file__).resolve().parents[1];runtime=root/'data/rabbitmq';runtime.mkdir(parents=True,exist_ok=True);runtime.chmod(0o700)
-p=argparse.ArgumentParser(description=__doc__);p.add_argument('action',choices=['start','stop','status','configure-idea']);args=p.parse_args()
+p=argparse.ArgumentParser(description=__doc__);p.add_argument('action',choices=['start','stop','status','configure-idea','configure-notifications']);args=p.parse_args()
 sbin=Path(os.environ.get('RABBITMQ_SBIN','/opt/homebrew/opt/rabbitmq/sbin'));node='campus_market@localhost'
 credentials=runtime/'client-env.json'
 if not credentials.exists():
@@ -19,9 +19,9 @@ distribution.listener.port_range.min = 25672
 distribution.listener.port_range.max = 25672
 vm_memory_high_watermark.absolute = 512MiB
 loopback_users.guest = true
-'''+f"default_user = {values['RABBITMQ_USERNAME']}\ndefault_pass = {values['RABBITMQ_PASSWORD']}\ndefault_vhost = /campus-market\n"+'''default_permissions.configure = ^campus[.]order[.].*
-default_permissions.write = ^campus[.]order[.].*
-default_permissions.read = ^campus[.]order[.].*
+'''+f"default_user = {values['RABBITMQ_USERNAME']}\ndefault_pass = {values['RABBITMQ_PASSWORD']}\ndefault_vhost = /campus-market\n"+'''default_permissions.configure = ^campus[.](order|notification)[.].*
+default_permissions.write = ^campus[.](order|notification)[.].*
+default_permissions.read = ^campus[.](order|notification)[.].*
 ''');conf.chmod(0o600)
 (runtime/'enabled_plugins').write_text('[rabbitmq_management].\n');(runtime/'env.conf').touch()
 env=os.environ.copy();env.update(RABBITMQ_CONF_ENV_FILE=str(runtime/'env.conf'),RABBITMQ_CONFIG_FILE=str(runtime/'rabbitmq'),RABBITMQ_MNESIA_BASE=str(runtime/'mnesia'),RABBITMQ_LOG_BASE=str(runtime/'logs'),RABBITMQ_PID_FILE=str(runtime/'rabbitmq.pid'),RABBITMQ_ENABLED_PLUGINS_FILE=str(runtime/'enabled_plugins'),RABBITMQ_NODENAME=node,RABBITMQ_ERLANG_COOKIE=cookie.read_text(),ERL_EPMD_ADDRESS='127.0.0.1',RABBITMQ_DIST_PORT='25672',RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS='-kernel inet_dist_use_interface {127,0,0,1} +S 2:2 +A 4',RABBITMQ_CTL_ERL_ARGS='+S 1:1 +A 2')
@@ -56,6 +56,16 @@ if args.action=='start':
  if not owned():raise SystemExit('节点归属核对失败，未修改权限')
  ctl('set_user_tags',values['RABBITMQ_USERNAME'],'management')
  print('RabbitMQ已启动：AMQP127.0.0.1:5672；管理页http://127.0.0.1:15672；专用vhost /campus-market。凭证仅保存在data/rabbitmq。')
+elif args.action=='configure-notifications':
+ if not owned():raise SystemExit('无法确认本项目节点归属，未修改权限')
+ if any(values.get(k)!=v for k,v in {'RABBITMQ_HOST':'127.0.0.1','RABBITMQ_PORT':'5672','RABBITMQ_USERNAME':'campus_mq','RABBITMQ_VHOST':'/campus-market'}.items()):raise SystemExit('仅支持本项目既有专用本机账号和vhost')
+ permission='^campus[.](order|notification)[.].*'
+ rows=json.loads(ctl('list_user_permissions',values['RABBITMQ_USERNAME'],'--formatter','json').stdout)
+ current=next((row for row in rows if row.get('vhost')=='/campus-market'),None)
+ if current is None or any(current.get(key) not in {'^campus[.]order[.].*',permission} for key in ['configure','write','read']):raise SystemExit('当前权限不符合已知项目配置，未覆盖自定义权限')
+ backup=runtime/('permissions-before-notifications-'+time.strftime('%Y%m%d-%H%M%S')+'.json');backup.write_text(json.dumps(current));backup.chmod(0o600)
+ ctl('set_permissions','-p','/campus-market',values['RABBITMQ_USERNAME'],permission,permission,permission)
+ print('已保留原订单队列权限并允许本项目通知命名空间；仅作用于既有本机账号和专用vhost，未修改IDEA或连接凭证')
 elif args.action=='stop':
  if not owned():raise SystemExit('无法确认项目节点归属，未停止任何程序')
  ctl('stop')

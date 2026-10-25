@@ -1,3 +1,7 @@
+import {orderExportQuery,validateOrderExport} from '@/utils/order-export.mjs'
+import {orderSearchQuery,validateOrderSearchPage} from '@/utils/order-search.mjs'
+import {issueListQuery} from '@/utils/order-issue-list.mjs'
+import {reviewTaskQuery} from '@/utils/order-review-tasks.mjs'
 import { validOrderTimeline } from '@/utils/order-timeline.js'
 import { request } from './request.js'
 import { orderId, validOrder, orderFilters, validOrderSummary, orderSummaryCount } from '@/utils/order.js'
@@ -26,17 +30,10 @@ export async function getOrderState(productId, auth = false) {
       !(result.myOrderId === null || (Number.isSafeInteger(result.myOrderId) && result.myOrderId > 0))) throw new Error('订单状态响应不正确')
   return result
 }
-export async function getOrders(role = 'BUYER', page = 1, status = 'ALL') {
-  if (!['BUYER', 'SELLER'].includes(role) || !Number.isSafeInteger(page) || page < 1 || page > 1000000 || !orderFilters.some(item => item.value === status)) throw new Error('订单列表参数不正确')
-  const result = await request({ path: `/api/orders?role=${role}&page=${page}&size=10&status=${status}`, auth: true })
-  if (!result || !Array.isArray(result.items) || !result.items.every(validOrder) || result.role !== role || result.status !== status || result.size !== 10 ||
-      !validOrderSummary(result.summary) || result.total !== orderSummaryCount(result.summary, status) ||
-      !Number.isSafeInteger(result.total) || result.total < 0 || !Number.isSafeInteger(result.page) || result.page < 1 ||
-      result.totalPages !== Math.max(1, Math.ceil(result.total / 10)) || result.page > result.totalPages || result.page !== Math.min(page, result.totalPages) ||
-      result.items.length !== Math.min(10, Math.max(0, result.total - (result.page - 1) * 10)) ||
-      !result.items.every(item => status === 'ALL' || item.status === status) ||
-      new Set(result.items.map(o => o.id)).size !== result.items.length) throw new Error('订单列表响应格式不正确')
-  return result
+export async function getOrders(role='BUYER',page=1,status='ALL',orderId='') {
+  const q=orderSearchQuery({role,page,status,orderId})
+  const result=await request({path:'/api/orders?role='+q.role+'&page='+q.page+'&size=10&status='+q.status+'&orderId='+q.orderId,auth:true})
+  return validateOrderSearchPage(result,q)
 }
 
 export async function simulateOrderPayment(id) {
@@ -63,4 +60,38 @@ export async function getOrderTimeline(id) {
  const result=await request({path:`/api/orders/${orderId(id)}/timeline`,auth:true})
  if(!validOrderTimeline(result)||result.order.id!==orderId(id))throw new Error('订单时间线响应不匹配')
  return result
+}
+
+export function getOrderReviews(id) {
+ return request({path:`/api/orders/${orderId(id)}/reviews`,auth:true})
+}
+export function createOrderReview(id,data) {
+ return request({path:`/api/orders/${orderId(id)}/reviews`,method:'POST',auth:true,data})
+}
+
+export function getOrderReviewTasks(query) {
+ const q=reviewTaskQuery(query)
+ return request({path:`/api/orders/review-tasks?role=${q.role}&status=${q.status}&page=${q.page}&size=${q.size}`,auth:true})
+}
+
+export function getOrderIssue(id) {
+ return request({path:`/api/orders/${orderId(id)}/issue`,auth:true})
+}
+export function createOrderIssue(id,data) {
+ return request({path:`/api/orders/${orderId(id)}/issue`,method:'POST',auth:true,data})
+}
+
+export function getOwnOrderIssues(query) {
+ const q=issueListQuery(query)
+ return request({path:`/api/orders/issues?role=${q.role}&status=${q.status}&page=${q.page}&size=${q.size}`,auth:true})
+}
+
+export function getTradeTasks() {
+ return request({path:'/api/orders/tasks/overview',auth:true})
+}
+
+export async function getOrderExport(value={}) {
+ const q=orderExportQuery(value)
+ const result=await request({path:'/api/orders/export?role='+q.role+'&status='+q.status+'&orderId='+q.orderId,auth:true})
+ return validateOrderExport(result,q)
 }

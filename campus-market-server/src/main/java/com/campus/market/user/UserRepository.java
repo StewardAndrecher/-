@@ -49,8 +49,8 @@ public class UserRepository {
 
     public int updateNickname(long id, String nickname, String expectedNickname) {
         return jdbcTemplate.update("""
-                UPDATE users SET nickname = ?
-                WHERE id = ? AND CAST(nickname AS BINARY) = CAST(? AS BINARY)
+                UPDATE users SET nickname = ?, profile_version=profile_version+1
+                WHERE id = ? AND CAST(nickname AS BINARY) = CAST(? AS BINARY) AND profile_version < 9007199254740991
                 """, nickname, id, expectedNickname);
     }
 
@@ -58,7 +58,7 @@ public class UserRepository {
         String sql = """
                 SELECT id, username, password_hash, nickname
                 FROM users
-                WHERE username = ?
+                WHERE username = ? FOR UPDATE
                 """;
         List<UserCredentials> users = jdbcTemplate.query(
                 sql,

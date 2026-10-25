@@ -1,0 +1,51 @@
+name: Client and desktop quick checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  client-desktop-quick:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node 22
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          package-manager-cache: false
+
+      - name: Verify quick test tooling
+        run: python3 -B -m unittest discover -s campus-market-client/tools/tests -v
+
+      - name: Check Node and test files
+        run: python3 -B campus-market-client/tools/test_quick.py --check
+
+      - name: Run client and desktop tests
+        run: python3 -B campus-market-client/tools/test_quick.py
+
+      - name: Upload verification reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: client-desktop-quick-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            campus-market-client/unpackage/quick-tests/latest.json
+            campus-market-client/unpackage/quick-tests/*/summary.json
+            campus-market-client/unpackage/quick-tests/*/*.log
+            campus-market-client/unpackage/quick-tests/*/junit/*.xml
+          if-no-files-found: warn
+          retention-days: 7

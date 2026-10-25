@@ -27,6 +27,7 @@ import org.springframework.stereotype.Component;
 public class LoginRateLimiter implements DisposableBean {
     private static final Logger log = LoggerFactory.getLogger(LoginRateLimiter.class);
     private static final DefaultRedisScript<String> RESERVE = script("redis/login-reserve.lua");
+    private static final DefaultRedisScript<String> REGISTRATION = script("redis/registration-reserve.lua");
     private static final DefaultRedisScript<String> FINISH = script("redis/login-finish.lua");
     private final boolean enabled;
     private final String prefix;
@@ -89,6 +90,22 @@ public class LoginRateLimiter implements DisposableBean {
         }
         if (!result.startsWith("OK:")) throw new LoginProtectionUnavailableException();
         return new Attempt(accountKey,ticket,result.substring(3));
+    }
+
+    boolean protectionEnabled(){return enabled;}
+    void beginRegistration(String remoteAddress,int limit,int seconds) {
+        try {
+            String key=prefix+"{"+digest(canonicalIp(remoteAddress))+"}:registration";
+            String result=execute(REGISTRATION,List.of(key),String.valueOf(limit),String.valueOf(seconds*1000L));
+            if("OK".equals(result))return;
+            if(result.startsWith("LIMIT:")){
+                long milliseconds=Long.parseLong(result.substring(6));
+                if(milliseconds<1||milliseconds>seconds*1000L)throw new IllegalArgumentException();
+                throw new RegistrationRateLimitedException((milliseconds+999)/1000);
+            }
+            throw new RegistrationProtectionUnavailableException();
+        }catch(RegistrationRateLimitedException limited){throw limited;}
+        catch(RuntimeException unavailable){throw new RegistrationProtectionUnavailableException();}
     }
 
     public void failed(Attempt attempt) { finish(attempt,"failure"); }

@@ -1,12 +1,13 @@
 <template>
   <view class="panel">
-    <text class="title">正式订单</text>
+    <text class="title">{{ capabilities?.paymentMode === 'SIMULATED' ? '演示订单' : '在线交易' }}</text>
+    <text v-if="capabilities?.simulatedPaymentEnabled" class="simulation-note">当前为演示流程，不发生真实扣款。</text>
     <text class="message">{{ message || '正在检查是否可以下单…' }}</text>
     <text v-if="error" class="error">{{ error }}</text>
     <button v-if="error" :disabled="busy || disabled" @click="emit('refresh')">重新加载商品详情</button>
-    <button v-if="!currentUser" :disabled="busy" @click="login">登录后下单</button>
+    <button v-if="!currentUser && capabilities?.orderCreationEnabled" :disabled="busy" @click="login">登录后下单</button>
     <button v-else-if="state?.myOrderId" :disabled="busy" @click="open">查看此商品订单</button>
-    <button v-else-if="state?.available" type="primary" :disabled="busy || disabled" @click="submit">{{ busy ? '正在确认…' : '确认下单（未付款）' }}</button>
+    <button v-else-if="state?.available && capabilities?.orderCreationEnabled" type="primary" :disabled="busy || disabled" @click="submit">{{ busy ? '正在确认…' : '确认下单（未付款）' }}</button>
     <button size="mini" :disabled="busy || disabled" @click="load">刷新订单状态</button>
   </view>
 </template>
@@ -14,22 +15,24 @@
 import { ref, watch, onUnmounted } from 'vue'
 import { currentUser, getToken } from '@/utils/session.js'
 import { createOrder, getOrderState } from '@/api/order.js'
+import { getTradeCapabilities } from '@/api/trade-capabilities.js'
 import { orderPath, orderRequestId } from '@/utils/order.js'
 const emit = defineEmits(['refresh', 'availability'])
 const props = defineProps({ product: { type: Object, required: true }, active: Boolean, disabled: Boolean })
+const capabilities = ref(null)
 const state = ref(null), busy = ref(false), error = ref(''), message = ref('')
 let generation = 0, closed = false, pending = null
 const alive = (n, token) => !closed && props.active && n === generation && token === getToken()
-function reset() { emit('availability', null); generation++; state.value = null; busy.value = false; error.value = ''; message.value = ''; pending = null; if (props.active) load() }
+function reset() { emit('availability', null); generation++; state.value = null; capabilities.value = null; busy.value = false; error.value = ''; message.value = ''; pending = null; if (props.active) load() }
 async function load() {
   if (closed || !props.active || busy.value || props.disabled) return
   const n = ++generation, token = getToken(); busy.value = true; error.value = ''
-  try { const result = await getOrderState(props.product.id, !!token); if (!alive(n, token)) return; state.value = result; message.value = result.message; emit('availability', result.available) }
-  catch (e) { if (alive(n, token)) { state.value = null; error.value = e.message || '检查订单状态失败' } }
+  try { const [result, capability] = await Promise.all([getOrderState(props.product.id, !!token), getTradeCapabilities()]); if (!alive(n, token)) return; state.value = result; capabilities.value = capability; message.value = capability.orderCreationEnabled ? result.message : capability.message; emit('availability', result.available) }
+  catch (e) { if (alive(n, token)) { state.value = null; capabilities.value = null; error.value = e.message || '检查订单状态失败' } }
   finally { if (n === generation) busy.value = false }
 }
 async function submit() {
-  if (closed || !props.active || props.disabled || busy.value || !state.value?.available || !currentUser.value || !getToken()) return
+  if (closed || !props.active || props.disabled || busy.value || !state.value?.available || !capabilities.value?.orderCreationEnabled || !currentUser.value || !getToken()) return
   const token = getToken(), userId = currentUser.value.id, productId = props.product.id, version = props.product.version, title = props.product.title, price = props.product.priceInCents, n = ++generation
   busy.value = true; error.value = ''
   try {
@@ -50,5 +53,5 @@ watch(() => props.disabled, value => { if (!value && props.active && !state.valu
 onUnmounted(() => { closed = true; generation++; pending = null })
 </script>
 <style scoped>
-.panel{padding:28rpx;margin:24rpx 0;background:white;border-radius:20rpx}.title{display:block;font-weight:bold}.message,.error{display:block;margin:18rpx 0}.error{color:#d93025}button{margin-top:18rpx}
+.panel{padding:28rpx;margin:24rpx 0;background:white;border-radius:20rpx}.title{display:block;font-weight:bold}.message,.error{display:block;margin:18rpx 0}.error{color:#d93025}.simulation-note{display:block;color:#657b9c;font-size:12px;margin-top:10px}button{margin-top:18rpx}
 </style>

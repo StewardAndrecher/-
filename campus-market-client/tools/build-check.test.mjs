@@ -22,7 +22,7 @@ async function mpFixture(root) {
   await put(root,'pages/index/index.json','{}')
 }
 async function appFixture(root) {
-  await put(root,'manifest.json',JSON.stringify({id:'__UNI__CAMPUSDEMO',name:'校园集市','@platforms':['android','iPhone'],launch_path:'__uniappview.html'}))
+  await put(root,'manifest.json',JSON.stringify({id:'__UNI__0000000',name:'校园集市','@platforms':['android','iPhone'],launch_path:'__uniappview.html'}))
   for (const name of ['app-service.js','app-config.js','app.css','__uniappview.html','uni-app-view.umd.js','pages/index/index.css']) await put(root,name,'resource')
   await put(root,'app-config-service.js','const __uniConfig = {"entryPagePath":"pages/index/index"};\nconst __uniRoutes = [{"path":"pages/index/index","meta":{"isNVue":false}}].map(uniRoute=>uniRoute);')
 }
@@ -47,7 +47,7 @@ if(process.env.FIXTURE_FAIL===platform){console.error('fixture compilation failu
 const put=(n,t)=>{fs.mkdirSync(path.dirname(path.join(out,n)),{recursive:true});fs.writeFileSync(path.join(out,n),t)};
 if(platform==='h5'){put('index.html','<script src="./assets/main.js"></script>');put('assets/main.js','console.log(1)')}
 else if(platform==='app'){
-put('manifest.json',JSON.stringify({id:'__UNI__CAMPUSDEMO',name:'校园集市','@platforms':['android','iPhone'],launch_path:'__uniappview.html'}));
+put('manifest.json',JSON.stringify({id:'__UNI__0000000',name:'校园集市','@platforms':['android','iPhone'],launch_path:'__uniappview.html'}));
 for(const name of ['app-service.js','app-config.js','app.css','__uniappview.html','uni-app-view.umd.js','pages/index/index.css'])put(name,'resource');
 put('app-config-service.js','const __uniConfig = {"entryPagePath":"pages/index/index"};\\nconst __uniRoutes = [{"path":"pages/index/index"}].map(route=>route);');
 }
@@ -63,6 +63,7 @@ test('matching scopes pass; mixed WXSS and JS fail',()=>{
 })
 test('inventory ignores generated/source-only directories and sorts comparison',()=>fixture(async root=>{
  await put(root,'App.vue','source');await put(root,'unpackage/dev/app.js','generated');await put(root,'.idea/private','excluded')
+ await put(root,'tools/__pycache__/quick_test_support.pyc','excluded bytecode');await put(root,'unpackage/quick-tests/report.xml','excluded test results')
  const source=await fileInventory(root,{source:true});assert.deepEqual(Object.keys(source),['App.vue']);assert.equal(source['App.vue'],sha256(Buffer.from('source')))
  assert.ok(sameInventory({a:'1',b:'2'},{b:'2',a:'1'}));assert.ok(!sameInventory({a:'1'},{a:'2'}))
 }))

@@ -40,7 +40,9 @@ public class FavoriteController {
     public ResponseEntity<FavoritePageResponse> page(
             @RequestParam(name = "page", defaultValue = "1") int page,
             @RequestParam(name = "size", defaultValue = "5") int size,
+            @RequestParam(name = "availability", defaultValue = "ALL") String availability,
+            @RequestParam(name = "keyword", defaultValue = "") String keyword,
             @RequestHeader(name = "Authorization", required = false) String authorization) {
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.page(page, size, authorization));
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.page(page, size, availability, keyword, authorization));
     }
 }

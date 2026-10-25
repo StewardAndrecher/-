@@ -133,8 +133,7 @@ class ProductImageIntegrationTest {
         assertEquals("nosniff",response.getHeader("X-Content-Type-Options"));
         var decoded=javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(response.getContentAsByteArray()));
         assertEquals(40,decoded.getWidth());assertEquals(30,decoded.getHeight());
-        var rebuilt=new com.campus.market.media.ImageService(new com.campus.market.media.ImageRepository(jdbc),
-                new com.campus.market.auth.SessionService(new com.campus.market.auth.SessionRepository(jdbc)),directory().toString());
+        var rebuilt=new com.campus.market.media.LocalImageObjectStore(directory().toString());
         assertTrue(rebuilt.read(id).exists());
     }
     @Test

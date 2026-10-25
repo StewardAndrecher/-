@@ -13,8 +13,11 @@ public class ImageRepository {
         jdbc.update("INSERT INTO product_images(id, owner_id, width, height) VALUES(?,?,?,?)",
                 id, ownerId, width, height);
     }
+    public Optional<Long> findOwnerForUpdate(String id) {
+        return jdbc.queryForList("SELECT i.owner_id FROM product_images i LEFT JOIN image_storage_records s ON s.image_id=i.id WHERE i.id=? AND s.trashed_at IS NULL AND s.purged_at IS NULL FOR UPDATE",Long.class,id).stream().findFirst();
+    }
     public Optional<Long> findOwner(String id) {
-        return jdbc.queryForList("SELECT owner_id FROM product_images WHERE id=?", Long.class, id)
+        return jdbc.queryForList("SELECT i.owner_id FROM product_images i LEFT JOIN image_storage_records s ON s.image_id=i.id WHERE i.id=? AND s.trashed_at IS NULL AND s.purged_at IS NULL", Long.class, id)
                 .stream().findFirst();
     }
 }

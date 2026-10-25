@@ -1,0 +1,36 @@
+/* Campus Market visual tokens and cross-page defaults. */
+page { --cm-blue: #2865e8; --cm-ink: #17243e; --cm-muted: #8290a6; --cm-border: #e2e8f2; background: #f5f7fc; color: #17243e; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; font-size: 14px; line-height: 1.5; }
+view, input, textarea, button { box-sizing: border-box; }
+button { font-family: inherit; font-size: 14px; font-weight: 500; color: #526b94; background: #fff; border: 1px solid #dce5f2; border-radius: 10px; line-height: 42px; min-height: 44px; padding: 0 18px; transition: background .18s, border-color .18s, box-shadow .18s; }
+button::after { border: 0; }
+button[size="mini"] { font-size: 12px; line-height: 32px; min-height: 34px; padding: 0 13px; }
+button[type="primary"] { background: #2865e8; border-color: #2865e8; color: #fff; box-shadow: 0 4px 12px #2865e81a; }
+button[disabled], button[type="primary"][disabled] { opacity: 1; background: #f3f5f9; border-color: #e7ecf4; color: #a6b0c0; box-shadow: none; }
+input, textarea { color: #243650; font-size: 14px; }
+input:focus-within, textarea:focus-within { border-color: #86a9f0; box-shadow: 0 0 0 3px #2865e80a; }
+.input-placeholder, .textarea-placeholder { color: #a0aabd; font-size: inherit; }
+.page { width: 100%; max-width: 1120px; margin-left: auto; margin-right: auto; }
+.page .panel { border: 1px solid #e7ecf4; box-shadow: 0 4px 20px #243d6b04; }
+/* #ifdef H5 */
+uni-page-body { --cm-blue: #2865e8; --cm-ink: #17243e; --cm-muted: #8290a6; --cm-border: #e2e8f2; background: #f5f7fc; color: #17243e; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; font-size: 14px; line-height: 1.5; }
+uni-view, uni-input, uni-textarea, uni-page-body uni-button { box-sizing: border-box; }
+uni-page-body uni-button { font-family: inherit; font-size: 14px; font-weight: 500; color: #526b94; background: #fff; border: 1px solid #dce5f2; border-radius: 10px; line-height: 42px; min-height: 44px; padding: 0 18px; transition: background .18s, border-color .18s, box-shadow .18s; }
+uni-page-body uni-button::after { border: 0; }
+uni-page-body uni-button[size="mini"] { font-size: 12px; line-height: 32px; min-height: 34px; padding: 0 13px; }
+uni-page-body uni-button[type="primary"] { background: #2865e8; border-color: #2865e8; color: #fff; box-shadow: 0 4px 12px #2865e81a; }
+uni-page-body uni-button[disabled], uni-page-body uni-button[type="primary"][disabled] { opacity: 1; background: #f3f5f9; border-color: #e7ecf4; color: #a6b0c0; box-shadow: none; }
+uni-input, uni-textarea { color: #243650; font-size: 14px; }
+uni-input:focus-within, uni-textarea:focus-within { border-color: #86a9f0; box-shadow: 0 0 0 3px #2865e80a; }
+.input-placeholder, .textarea-placeholder { color: #a0aabd; font-size: inherit; }
+.page { width: 100%; max-width: 1120px; margin-left: auto; margin-right: auto; }
+.page .panel { border: 1px solid #e7ecf4; box-shadow: 0 4px 20px #243d6b04; }
+button:focus-visible, uni-page-body uni-button:focus-visible { outline: 3px solid #adc8ff; outline-offset: 3px; }
+body { background: #f5f7fc; }
+uni-page-head .uni-page-head { background: #fff !important; border-bottom: 1px solid #e7ecf4; color: #223e6a; }
+uni-page-body > .page:not(.market-page):not(.auth-page) { padding: 28px; min-height: calc(100vh - 44px); background: transparent; }
+uni-page-body .page .summary, uni-page-body .page .hint, uni-page-body .page .message { font-size: 13px; line-height: 1.8; }
+uni-page-body .page .panel > .title, uni-page-body .page .panel > .heading { font-size: 22px; color: #20395f; }
+@media (hover: hover) { uni-page-body uni-button:not([disabled]):hover { border-color: #98b5ef; background: #f3f7ff; } uni-page-body uni-button[type="primary"]:not([disabled]):hover { background: #1c56d2; border-color: #1c56d2; } }
+@media (max-width: 760px) { uni-page-body > .page:not(.market-page):not(.auth-page) { padding: 20px 16px; } }
+@media (prefers-reduced-motion: reduce) { button { transition: none; } }
+/* #endif */

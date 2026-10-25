@@ -25,7 +25,7 @@ public class ImageController {
     public ResponseEntity<Resource> read(@PathVariable("id") String id) {
         return ResponseEntity.ok().contentType(MediaType.IMAGE_PNG)
                 .header("X-Content-Type-Options", "nosniff")
-                .cacheControl(CacheControl.maxAge(7, TimeUnit.DAYS).cachePublic())
+                .cacheControl(CacheControl.maxAge(5, TimeUnit.MINUTES).cachePublic())
                 .body(service.read(id));
     }
 }

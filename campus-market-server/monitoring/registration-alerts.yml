@@ -1,0 +1,37 @@
+# 第114课：仅监控保护判断；普通429不触发技术故障告警。
+{
+  "groups": [
+    {
+      "name": "campus-market-registration",
+      "interval": "5s",
+      "rules": [
+        {
+          "alert": "CampusRegistrationMetricsMissing",
+          "expr": "(up{job=\"campus-market\"} == 1) unless on(job,instance) (((campus_registration_protection_enabled{job=\"campus-market\"} == 0) or (campus_registration_protection_enabled{job=\"campus-market\"} == 1)) and on(job,instance) (campus_registration_protection_limit{job=\"campus-market\"} > 0) and on(job,instance) (campus_registration_protection_window_seconds{job=\"campus-market\"} > 0) and on(job,instance) (count by(job,instance) (campus_registration_decisions_total{job=\"campus-market\",outcome=~\"allowed|limited|unavailable|disabled\"}) == 4))",
+          "for": "1m",
+          "labels": {
+            "severity": "warning",
+            "component": "registration"
+          },
+          "annotations": {
+            "summary": "注册保护指标缺失或无效",
+            "description": "应用可采集，但注册保护开关、策略或四种结果指标连续1分钟不完整。检查发布版本与监控配置；缺失不能当成零。"
+          }
+        },
+        {
+          "alert": "CampusRegistrationProtectionUnavailable",
+          "expr": "(sum by(job,instance) (increase(campus_registration_decisions_total{job=\"campus-market\",outcome=\"unavailable\"}[5m])) > 0) and on(job,instance) (campus_registration_protection_enabled{job=\"campus-market\"} == 1) and on(job,instance) (up{job=\"campus-market\"} == 1)",
+          "for": "30s",
+          "labels": {
+            "severity": "warning",
+            "component": "registration"
+          },
+          "annotations": {
+            "summary": "注册保护出现拒绝服务故障",
+            "description": "注册保护开启时，近5分钟出现无法完成保护判断的请求，且条件持续30秒。检查专用Redis连接、计数器和保护日志；最后一次故障离开5分钟窗口后恢复。零错误不代表Redis已通过健康探测。"
+          }
+        }
+      ]
+    }
+  ]
+}

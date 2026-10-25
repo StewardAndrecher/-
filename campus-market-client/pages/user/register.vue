@@ -1,5 +1,6 @@
 <template>
-  <view class="page">
+  <view class="page auth-page">
+    <view class="auth-brand"><image src="/static/ui/brand-mark.png" mode="aspectFit" /><text>校园集市</text><text class="auth-caption">好物相遇，从这里开始</text></view>
     <view v-if="registeredUser" class="panel">
       <text class="title">注册成功</text>
       <text class="message">你好，{{ registeredUser.nickname }}！</text>
@@ -9,7 +10,9 @@
     </view>
 
     <view v-else class="panel">
+      <text class="auth-eyebrow">JOIN THE CAMPUS</text>
       <text class="title">创建校园集市账号</text>
+      <text class="auth-subtitle">加入校园集市，让闲置的价值继续流转。</text>
 
       <text class="label">用户名</text>
       <input v-model="username" class="field" :maxlength="-1"
@@ -34,20 +37,22 @@
         @confirm="submitRegistration" />
 
       <text v-if="errorMessage" class="error">{{ errorMessage }}</text>
+      <text v-if="retryIn>0" class="hint">请等待{{ retryIn }}秒后再注册；表单仍保留，不会自动提交。</text>
       <button type="primary" :loading="submitting"
-        :disabled="submitting" @click="submitRegistration">
-        {{ submitting ? '注册中…' : '注册账号' }}
+        :disabled="submitting||retryIn>0" @click="submitRegistration">
+        {{ submitting ? '注册中…' : retryIn>0 ? `等待${retryIn}秒后重试` : '注册账号' }}
       </button>
     </view>
 
-    <button :disabled="submitting" @click="goHome">返回首页</button>
+    <button class="back-home" :disabled="submitting" @click="goHome">返回首页</button>
   </view>
 </template>
 
 <script setup>
 import { ref } from 'vue'
-import { onUnload } from '@dcloudio/uni-app'
+import { onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import { registerUser } from '@/api/user.js'
+import {createRegistrationCooldown} from '@/utils/registration-retry.mjs'
 
 const username = ref('')
 const nickname = ref('')
@@ -57,9 +62,15 @@ const submitting = ref(false)
 const errorMessage = ref('')
 const registeredUser = ref(null)
 let pageClosed = false
+const retryIn=ref(0),cooldown=createRegistrationCooldown()
+let retryTimer=null,pageActive=true
+function updateRetry(){retryIn.value=cooldown.remaining();if(retryIn.value===0)stopRetry()}
+function stopRetry(){if(retryTimer!==null){clearInterval(retryTimer);retryTimer=null}}
+function startRetry(){stopRetry();updateRetry();if(pageActive&&retryIn.value>0)retryTimer=setInterval(updateRetry,250)}
 
 async function submitRegistration() {
   if (submitting.value || registeredUser.value || pageClosed) return
+  updateRetry();if(retryIn.value>0)return
   errorMessage.value = ''
 
   const loginName = username.value.trim()
@@ -97,6 +108,7 @@ async function submitRegistration() {
         !user.nickname.trim()) {
       throw new Error('注册响应格式不正确，请确认注册结果后再试')
     }
+    cooldown.clear();stopRetry();retryIn.value=0
     registeredUser.value = {
       id: user.id,
       username: user.username,
@@ -106,7 +118,10 @@ async function submitRegistration() {
     confirmPassword.value = ''
   } catch (error) {
     if (pageClosed) return
-    errorMessage.value = error.statusCode === 0
+    const waiting=cooldown.start(error);if(waiting)startRetry()
+    errorMessage.value = waiting&&error.statusCode===429
+      ? '注册请求过于频繁，请等待倒计时结束后再提交'
+      : error.statusCode === 0
       ? '网络中断，暂时无法确认注册结果，请稍后重试'
       : (error.message || '注册请求失败，请稍后重试')
   } finally {
@@ -131,7 +146,10 @@ function goHome() {
   }
 }
 
+onShow(()=>{pageActive=true;startRetry()})
+onHide(()=>{pageActive=false;stopRetry();password.value='';confirmPassword.value=''})
 onUnload(() => {
+  stopRetry();cooldown.clear()
   pageClosed = true
   password.value = ''
   confirmPassword.value = ''
@@ -139,29 +157,20 @@ onUnload(() => {
 </script>
 
 <style scoped>
-.page {
-  padding: 32rpx;
-  min-height: 100vh;
-  background: #f5f7fa;
-  box-sizing: border-box;
-}
-.panel {
-  padding: 32rpx;
-  margin-bottom: 24rpx;
-  background: #ffffff;
-  border-radius: 20rpx;
-}
-.title { display: block; font-size: 36rpx; font-weight: bold; }
-.label { display: block; margin-top: 28rpx; margin-bottom: 12rpx; }
-.field {
-  height: 88rpx;
-  padding: 0 20rpx;
-  border: 1px solid #d9dfe8;
-  border-radius: 12rpx;
-  font-size: 28rpx;
-}
-.hint, .message, .error { display: block; margin-top: 20rpx; line-height: 1.6; }
-.hint { color: #666666; font-size: 24rpx; }
-.error { color: #d93025; }
-button { margin-top: 28rpx; }
+.auth-page { max-width: none; min-height: calc(100vh - 44px); padding: 38px 20px 48px; box-sizing: border-box; background: #f5f7fc; }
+.auth-brand { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; width: 100%; max-width: 440px; margin: 0 auto 26px; gap: 10px; font-size: 22px; font-weight: 750; color: #173f89; }
+.auth-brand image { width: 31px; height: 35px; }
+.auth-caption { display: block; width: 100%; text-align: center; margin-top: 2px; font-size: 12px; font-weight: 400; letter-spacing: 2px; color: #98a6bc; }
+.panel { max-width: 440px; padding: 34px 36px; margin: 0 auto 20px; background: #fff; border: 1px solid #e4eaf4; border-radius: 20px; box-shadow: 0 12px 40px #273e6806; }
+.auth-eyebrow { display: block; color: #93a7c7; font-size: 9px; letter-spacing: 2px; margin-bottom: 10px; }
+.auth-page .panel .title { display: block; font-size: 24px; font-weight: 750; color: #1d355b; }
+.auth-subtitle { display: block; font-size: 12px; line-height: 1.8; color: #94a0b2; margin-top: 10px; margin-bottom: 25px; }
+.label { display: block; font-size: 13px; color: #5d708e; margin: 22px 0 9px; }
+.field { height: 45px; padding: 0 13px; border: 1px solid #e0e7f2; border-radius: 9px; background: #f9fafd; font-size: 13px; }
+.hint, .message, .error { display: block; margin-top: 15px; font-size: 12px; line-height: 1.8; }
+.hint { color: #94a0b2; }
+.error { color: #bd3e40; background: #fff2f0; padding: 10px 12px; border-radius: 8px; }
+.panel button { margin-top: 28px; height: 44px; line-height: 42px; font-size: 14px; border-radius: 10px; }
+.back-home { max-width: 440px; margin: 0 auto; background: transparent; border-color: transparent; color: #8394ae; font-size: 12px; }
+@media (max-width: 500px) { .auth-page { padding: 28px 20px; } .panel { padding: 28px 24px; border-radius: 17px; } .auth-page .panel .title { font-size: 22px; } }
 </style>

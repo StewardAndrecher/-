@@ -12,7 +12,7 @@
 ## 本机开发运行
 
 ```sh
-cd campus-market-desktop
+cd /path/to/campus-market-desktop
 npm ci
 npm run prepare:runtime
 npm run sync:web
@@ -22,7 +22,7 @@ npm start
 第一次需先在前端项目执行：
 
 ```sh
-cd campus-market-client
+cd /path/to/campus-market-client
 ./tools/build.sh h5
 ```
 
@@ -31,7 +31,7 @@ cd campus-market-client
 ## 打包
 
 ```sh
-cd campus-market-desktop
+cd /path/to/campus-market-desktop
 npm test
 npm run package
 ```

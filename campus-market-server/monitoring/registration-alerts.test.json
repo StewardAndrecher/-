@@ -1,0 +1,744 @@
+{
+  "rule_files": [
+    "registration-alerts.yml"
+  ],
+  "evaluation_interval": "5s",
+  "tests": [
+    {
+      "name": "healthy idle is not Redis health probe",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1+0x90"
+        },
+        {
+          "series": "campus_registration_protection_enabled{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1+0x90"
+        },
+        {
+          "series": "campus_registration_protection_limit{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "60+0x90"
+        },
+        {
+          "series": "campus_registration_protection_window_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "60+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"allowed\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"limited\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"unavailable\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"disabled\"}",
+          "values": "0+0x90"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "100s",
+          "alertname": "CampusRegistrationMetricsMissing",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "100s",
+          "alertname": "CampusRegistrationProtectionUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "400s",
+          "alertname": "CampusRegistrationMetricsMissing",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "400s",
+          "alertname": "CampusRegistrationProtectionUnavailable",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "name": "normal 429 traffic produces no outage alert",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1+0x90"
+        },
+        {
+          "series": "campus_registration_protection_enabled{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1+0x90"
+        },
+        {
+          "series": "campus_registration_protection_limit{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "60+0x90"
+        },
+        {
+          "series": "campus_registration_protection_window_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "60+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"allowed\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"limited\"}",
+          "values": "0+5x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"unavailable\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"disabled\"}",
+          "values": "0+0x90"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "100s",
+          "alertname": "CampusRegistrationMetricsMissing",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "100s",
+          "alertname": "CampusRegistrationProtectionUnavailable",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "name": "recent unavailable decisions after hold",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1+0x90"
+        },
+        {
+          "series": "campus_registration_protection_enabled{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1+0x90"
+        },
+        {
+          "series": "campus_registration_protection_limit{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "60+0x90"
+        },
+        {
+          "series": "campus_registration_protection_window_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "60+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"allowed\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"limited\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"unavailable\"}",
+          "values": "0+1x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"disabled\"}",
+          "values": "0+0x90"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "100s",
+          "alertname": "CampusRegistrationMetricsMissing",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "100s",
+          "alertname": "CampusRegistrationProtectionUnavailable",
+          "exp_alerts": [
+            {
+              "exp_labels": {
+                "job": "campus-market",
+                "instance": "fixture:8080",
+                "severity": "warning",
+                "component": "registration"
+              },
+              "exp_annotations": {
+                "summary": "注册保护出现拒绝服务故障",
+                "description": "注册保护开启时，近5分钟出现无法完成保护判断的请求，且条件持续30秒。检查专用Redis连接、计数器和保护日志；最后一次故障离开5分钟窗口后恢复。零错误不代表Redis已通过健康探测。"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "pending outage does not fire before 30s",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1+0x90"
+        },
+        {
+          "series": "campus_registration_protection_enabled{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1+0x90"
+        },
+        {
+          "series": "campus_registration_protection_limit{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "60+0x90"
+        },
+        {
+          "series": "campus_registration_protection_window_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "60+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"allowed\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"limited\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"unavailable\"}",
+          "values": "0+1x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"disabled\"}",
+          "values": "0+0x90"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "30s",
+          "alertname": "CampusRegistrationMetricsMissing",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "30s",
+          "alertname": "CampusRegistrationProtectionUnavailable",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "name": "disabled protection suppresses past error alerts",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1+0x90"
+        },
+        {
+          "series": "campus_registration_protection_enabled{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "campus_registration_protection_limit{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "60+0x90"
+        },
+        {
+          "series": "campus_registration_protection_window_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "60+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"allowed\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"limited\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"unavailable\"}",
+          "values": "0+1x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"disabled\"}",
+          "values": "0+0x90"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "100s",
+          "alertname": "CampusRegistrationMetricsMissing",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "100s",
+          "alertname": "CampusRegistrationProtectionUnavailable",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "name": "backend down uses existing application alert",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "0+0x90"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "100s",
+          "alertname": "CampusRegistrationMetricsMissing",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "100s",
+          "alertname": "CampusRegistrationProtectionUnavailable",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "name": "missing all registration series after hold",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1+0x90"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "100s",
+          "alertname": "CampusRegistrationMetricsMissing",
+          "exp_alerts": [
+            {
+              "exp_labels": {
+                "job": "campus-market",
+                "instance": "fixture:8080",
+                "severity": "warning",
+                "component": "registration"
+              },
+              "exp_annotations": {
+                "summary": "注册保护指标缺失或无效",
+                "description": "应用可采集，但注册保护开关、策略或四种结果指标连续1分钟不完整。检查发布版本与监控配置；缺失不能当成零。"
+              }
+            }
+          ]
+        },
+        {
+          "eval_time": "100s",
+          "alertname": "CampusRegistrationProtectionUnavailable",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "name": "missing series does not fire before 1m",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1+0x90"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "55s",
+          "alertname": "CampusRegistrationMetricsMissing",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "55s",
+          "alertname": "CampusRegistrationProtectionUnavailable",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "name": "invalid enabled gauge is missing",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1+0x90"
+        },
+        {
+          "series": "campus_registration_protection_enabled{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "2+0x90"
+        },
+        {
+          "series": "campus_registration_protection_limit{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "60+0x90"
+        },
+        {
+          "series": "campus_registration_protection_window_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "60+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"allowed\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"limited\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"unavailable\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"disabled\"}",
+          "values": "0+0x90"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "100s",
+          "alertname": "CampusRegistrationMetricsMissing",
+          "exp_alerts": [
+            {
+              "exp_labels": {
+                "job": "campus-market",
+                "instance": "fixture:8080",
+                "severity": "warning",
+                "component": "registration"
+              },
+              "exp_annotations": {
+                "summary": "注册保护指标缺失或无效",
+                "description": "应用可采集，但注册保护开关、策略或四种结果指标连续1分钟不完整。检查发布版本与监控配置；缺失不能当成零。"
+              }
+            }
+          ]
+        },
+        {
+          "eval_time": "100s",
+          "alertname": "CampusRegistrationProtectionUnavailable",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "name": "one missing outcome is not silently zero",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1+0x90"
+        },
+        {
+          "series": "campus_registration_protection_enabled{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1+0x90"
+        },
+        {
+          "series": "campus_registration_protection_limit{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "60+0x90"
+        },
+        {
+          "series": "campus_registration_protection_window_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "60+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"allowed\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"limited\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"unavailable\"}",
+          "values": "0+0x90"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "100s",
+          "alertname": "CampusRegistrationMetricsMissing",
+          "exp_alerts": [
+            {
+              "exp_labels": {
+                "job": "campus-market",
+                "instance": "fixture:8080",
+                "severity": "warning",
+                "component": "registration"
+              },
+              "exp_annotations": {
+                "summary": "注册保护指标缺失或无效",
+                "description": "应用可采集，但注册保护开关、策略或四种结果指标连续1分钟不完整。检查发布版本与监控配置；缺失不能当成零。"
+              }
+            }
+          ]
+        },
+        {
+          "eval_time": "100s",
+          "alertname": "CampusRegistrationProtectionUnavailable",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "name": "counter reset with no postrestart errors is quiet",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1+0x90"
+        },
+        {
+          "series": "campus_registration_protection_enabled{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1+0x90"
+        },
+        {
+          "series": "campus_registration_protection_limit{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "60+0x90"
+        },
+        {
+          "series": "campus_registration_protection_window_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "60+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"allowed\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"limited\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"unavailable\"}",
+          "values": "10+0x8 0+0x82"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"disabled\"}",
+          "values": "0+0x90"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "100s",
+          "alertname": "CampusRegistrationMetricsMissing",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "100s",
+          "alertname": "CampusRegistrationProtectionUnavailable",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "name": "last error ages out of five minute window",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1+0x90"
+        },
+        {
+          "series": "campus_registration_protection_enabled{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1+0x90"
+        },
+        {
+          "series": "campus_registration_protection_limit{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "60+0x90"
+        },
+        {
+          "series": "campus_registration_protection_window_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "60+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"allowed\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"limited\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"unavailable\"}",
+          "values": "0 1+0x89"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"disabled\"}",
+          "values": "0+0x90"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "400s",
+          "alertname": "CampusRegistrationMetricsMissing",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "400s",
+          "alertname": "CampusRegistrationProtectionUnavailable",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "name": "healthy second instance cannot mask missing metrics",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1+0x90"
+        },
+        {
+          "series": "up{job=\"campus-market\",instance=\"other:8080\"}",
+          "values": "1+0x90"
+        },
+        {
+          "series": "campus_registration_protection_enabled{job=\"campus-market\",instance=\"other:8080\"}",
+          "values": "1+0x90"
+        },
+        {
+          "series": "campus_registration_protection_limit{job=\"campus-market\",instance=\"other:8080\"}",
+          "values": "60+0x90"
+        },
+        {
+          "series": "campus_registration_protection_window_seconds{job=\"campus-market\",instance=\"other:8080\"}",
+          "values": "60+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"other:8080\",outcome=\"allowed\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"other:8080\",outcome=\"limited\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"other:8080\",outcome=\"unavailable\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"other:8080\",outcome=\"disabled\"}",
+          "values": "0+0x90"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "100s",
+          "alertname": "CampusRegistrationMetricsMissing",
+          "exp_alerts": [
+            {
+              "exp_labels": {
+                "job": "campus-market",
+                "instance": "fixture:8080",
+                "severity": "warning",
+                "component": "registration"
+              },
+              "exp_annotations": {
+                "summary": "注册保护指标缺失或无效",
+                "description": "应用可采集，但注册保护开关、策略或四种结果指标连续1分钟不完整。检查发布版本与监控配置；缺失不能当成零。"
+              }
+            }
+          ]
+        },
+        {
+          "eval_time": "100s",
+          "alertname": "CampusRegistrationProtectionUnavailable",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "name": "one instance outage does not alert healthy peer",
+      "interval": "5s",
+      "input_series": [
+        {
+          "series": "up{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1+0x90"
+        },
+        {
+          "series": "campus_registration_protection_enabled{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "1+0x90"
+        },
+        {
+          "series": "campus_registration_protection_limit{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "60+0x90"
+        },
+        {
+          "series": "campus_registration_protection_window_seconds{job=\"campus-market\",instance=\"fixture:8080\"}",
+          "values": "60+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"allowed\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"limited\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"unavailable\"}",
+          "values": "0+1x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"fixture:8080\",outcome=\"disabled\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "up{job=\"campus-market\",instance=\"other:8080\"}",
+          "values": "1+0x90"
+        },
+        {
+          "series": "campus_registration_protection_enabled{job=\"campus-market\",instance=\"other:8080\"}",
+          "values": "1+0x90"
+        },
+        {
+          "series": "campus_registration_protection_limit{job=\"campus-market\",instance=\"other:8080\"}",
+          "values": "60+0x90"
+        },
+        {
+          "series": "campus_registration_protection_window_seconds{job=\"campus-market\",instance=\"other:8080\"}",
+          "values": "60+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"other:8080\",outcome=\"allowed\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"other:8080\",outcome=\"limited\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"other:8080\",outcome=\"unavailable\"}",
+          "values": "0+0x90"
+        },
+        {
+          "series": "campus_registration_decisions_total{job=\"campus-market\",instance=\"other:8080\",outcome=\"disabled\"}",
+          "values": "0+0x90"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "100s",
+          "alertname": "CampusRegistrationProtectionUnavailable",
+          "exp_alerts": [
+            {
+              "exp_labels": {
+                "job": "campus-market",
+                "instance": "fixture:8080",
+                "severity": "warning",
+                "component": "registration"
+              },
+              "exp_annotations": {
+                "summary": "注册保护出现拒绝服务故障",
+                "description": "注册保护开启时，近5分钟出现无法完成保护判断的请求，且条件持续30秒。检查专用Redis连接、计数器和保护日志；最后一次故障离开5分钟窗口后恢复。零错误不代表Redis已通过健康探测。"
+              }
+            }
+          ]
+        },
+        {
+          "eval_time": "100s",
+          "alertname": "CampusRegistrationMetricsMissing",
+          "exp_alerts": []
+        }
+      ]
+    }
+  ]
+}

@@ -12,6 +12,7 @@ import java.sql.Statement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.ArrayList;
 
 @Repository
 public class ProductRepository {
@@ -36,10 +37,12 @@ public class ProductRepository {
 
     public List<ProductResponse> findPage(String keyword, String category, ProductSort sort,
                                           int size, long offset) {
+        if (sort == ProductSort.NEWEST) return findNewestPage(keyword, category, size, offset);
         String sql = """
                 SELECT p.id, p.title, p.description, p.price_in_cents, p.status,
-                       p.cover_image_id, p.version, p.category_code,
-                       u.id AS seller_id, u.nickname AS seller_nickname,
+                       p.cover_image_id, p.version, p.category_code, p.campus_code, p.condition_code, p.handover_location,
+                       u.id AS seller_id, u.nickname AS seller_nickname, u.avatar_image_id AS seller_avatar, u.bio AS seller_bio, u.campus_code AS seller_campus,
+                       (SELECT GROUP_CONCAT(g.image_id ORDER BY g.position SEPARATOR ',') FROM product_gallery g WHERE g.product_id=p.id) AS gallery_ids,
                        (SELECT COUNT(*) FROM product_favorites pf WHERE pf.product_id = p.id) AS favorite_count
                 FROM products p LEFT JOIN users u ON u.id = p.seller_id
                 WHERE p.status = 'ON_SALE' AND p.title LIKE ? ESCAPE '!'
@@ -50,6 +53,67 @@ public class ProductRepository {
         return category.isEmpty()
                 ? jdbcTemplate.query(sql, this::mapProduct, searchPattern(keyword), size, offset)
                 : jdbcTemplate.query(sql, this::mapProduct, searchPattern(keyword), category, size, offset);
+    }
+
+    // LIMIT forces this derived table to materialize: decorate only the selected page.
+    // The outer ORDER BY preserves the public ordering; derived-table order alone is not guaranteed.
+    private List<ProductResponse> findNewestPage(String keyword, String category, int size, long offset) {
+        String page = """
+                SELECT p.id, p.title, p.description, p.price_in_cents, p.status,
+                       p.cover_image_id, p.version, p.category_code, p.campus_code, p.condition_code, p.handover_location, p.seller_id, p.created_at
+                FROM products p
+                WHERE p.status = 'ON_SALE' AND p.title LIKE ? ESCAPE '!'
+                """;
+        if (!category.isEmpty()) page += " AND p.category_code = ?";
+        page += " ORDER BY p.created_at DESC, p.id DESC LIMIT ? OFFSET ?";
+        String sql = """
+                SELECT p.id, p.title, p.description, p.price_in_cents, p.status,
+                       p.cover_image_id, p.version, p.category_code, p.campus_code, p.condition_code, p.handover_location,
+                       u.id AS seller_id, u.nickname AS seller_nickname, u.avatar_image_id AS seller_avatar, u.bio AS seller_bio, u.campus_code AS seller_campus,
+                       (SELECT GROUP_CONCAT(g.image_id ORDER BY g.position SEPARATOR ',') FROM product_gallery g WHERE g.product_id=p.id) AS gallery_ids,
+                       (SELECT COUNT(*) FROM product_favorites pf WHERE pf.product_id = p.id) AS favorite_count
+                FROM (
+                """ + page + """
+                ) p LEFT JOIN users u ON u.id = p.seller_id
+                ORDER BY p.created_at DESC, p.id DESC
+                """;
+        return category.isEmpty()
+                ? jdbcTemplate.query(sql, this::mapProduct, searchPattern(keyword), size, offset)
+                : jdbcTemplate.query(sql, this::mapProduct, searchPattern(keyword), category, size, offset);
+    }
+
+    public record FeedRow(ProductResponse product, long epochSecond) {}
+
+    public List<FeedRow> findFeed(String keyword, String category, ProductFeedCursor cursor, int limit) {
+        String page = """
+                SELECT p.id, p.title, p.description, p.price_in_cents, p.status,
+                       p.cover_image_id, p.version, p.category_code, p.campus_code, p.condition_code, p.handover_location, p.seller_id, p.created_at
+                FROM products p
+                WHERE p.status = 'ON_SALE' AND p.title LIKE ? ESCAPE '!'
+                """;
+        var arguments = new java.util.ArrayList<Object>();
+        arguments.add(searchPattern(keyword));
+        if (!category.isEmpty()) {page += " AND p.category_code = ?"; arguments.add(category);}
+        if (cursor != null) {
+            // Compare raw indexed columns; apply the timezone conversion to constants, not created_at.
+            page += " AND (p.created_at < FROM_UNIXTIME(?) OR (p.created_at = FROM_UNIXTIME(?) AND p.id < ?))";
+            arguments.add(cursor.epochSecond()); arguments.add(cursor.epochSecond()); arguments.add(cursor.id());
+        }
+        page += " ORDER BY p.created_at DESC, p.id DESC LIMIT ?";
+        arguments.add(limit);
+        String sql = """
+                SELECT p.id, p.title, p.description, p.price_in_cents, p.status,
+                       p.cover_image_id, p.version, p.category_code, p.campus_code, p.condition_code, p.handover_location,
+                       UNIX_TIMESTAMP(p.created_at) AS cursor_epoch,
+                       u.id AS seller_id, u.nickname AS seller_nickname, u.avatar_image_id AS seller_avatar, u.bio AS seller_bio, u.campus_code AS seller_campus,
+                       (SELECT GROUP_CONCAT(g.image_id ORDER BY g.position SEPARATOR ',') FROM product_gallery g WHERE g.product_id=p.id) AS gallery_ids,
+                       (SELECT COUNT(*) FROM product_favorites pf WHERE pf.product_id = p.id) AS favorite_count
+                FROM (
+                """ + page + """
+                ) p LEFT JOIN users u ON u.id = p.seller_id
+                ORDER BY p.created_at DESC, p.id DESC
+                """;
+        return jdbcTemplate.query(sql, (rs, row) -> new FeedRow(mapProduct(rs, row), rs.getLong("cursor_epoch")), arguments.toArray());
     }
 
     private String searchPattern(String keyword) {
@@ -108,7 +172,8 @@ public class ProductRepository {
 
     public Optional<ProductDetailState> findDetailState(long id) {
         String sql = """
-                SELECT p.id, p.status, p.version, u.id AS seller_id, u.nickname AS seller_nickname,
+                SELECT p.id, p.status, p.version, u.id AS seller_id, u.nickname AS seller_nickname, u.avatar_image_id AS seller_avatar, u.bio AS seller_bio, u.campus_code AS seller_campus,
+                       (SELECT GROUP_CONCAT(g.image_id ORDER BY g.position SEPARATOR ',') FROM product_gallery g WHERE g.product_id=p.id) AS gallery_ids,
                        (SELECT COUNT(*) FROM product_favorites pf WHERE pf.product_id = p.id) AS favorite_count
                 FROM products p LEFT JOIN users u ON u.id = p.seller_id
                 WHERE p.id = ?
@@ -116,7 +181,7 @@ public class ProductRepository {
         return jdbcTemplate.query(sql, (rs, rowNum) -> {
             Long sellerId = rs.getObject("seller_id", Long.class);
             SellerResponse seller = sellerId == null ? null
-                    : new SellerResponse(sellerId, rs.getString("seller_nickname"));
+                    : new SellerResponse(sellerId, rs.getString("seller_nickname"),rs.getString("seller_avatar"),rs.getString("seller_bio"),rs.getString("seller_campus"));
             return new ProductDetailState(rs.getLong("id"), ProductStatus.valueOf(rs.getString("status")),
                     rs.getLong("version"), seller, rs.getLong("favorite_count"));
         }, id).stream().findFirst();
@@ -129,8 +194,9 @@ public class ProductRepository {
 
     private Optional<ProductResponse> findById(long id, boolean lock) {
         String sql = """
-                SELECT p.id, p.title, p.description, p.price_in_cents, p.status, p.cover_image_id, p.version, p.category_code,
-                       u.id AS seller_id, u.nickname AS seller_nickname,
+                SELECT p.id, p.title, p.description, p.price_in_cents, p.status, p.cover_image_id, p.version, p.category_code, p.campus_code, p.condition_code, p.handover_location,
+                       u.id AS seller_id, u.nickname AS seller_nickname, u.avatar_image_id AS seller_avatar, u.bio AS seller_bio, u.campus_code AS seller_campus,
+                       (SELECT GROUP_CONCAT(g.image_id ORDER BY g.position SEPARATOR ',') FROM product_gallery g WHERE g.product_id=p.id) AS gallery_ids,
                        (SELECT COUNT(*) FROM product_favorites pf WHERE pf.product_id = p.id) AS favorite_count
                 FROM products p
                 LEFT JOIN users u ON u.id = p.seller_id
@@ -191,8 +257,9 @@ public class ProductRepository {
 
     public List<ProductResponse> findPageBySeller(long sellerId, ProductStatus status, String keyword, ProductOwnerSort sort, int size, long offset) {
         String sql = """
-                SELECT p.id, p.title, p.description, p.price_in_cents, p.status, p.cover_image_id, p.version, p.category_code,
-                       u.id AS seller_id, u.nickname AS seller_nickname,
+                SELECT p.id, p.title, p.description, p.price_in_cents, p.status, p.cover_image_id, p.version, p.category_code, p.campus_code, p.condition_code, p.handover_location,
+                       u.id AS seller_id, u.nickname AS seller_nickname, u.avatar_image_id AS seller_avatar, u.bio AS seller_bio, u.campus_code AS seller_campus,
+                       (SELECT GROUP_CONCAT(g.image_id ORDER BY g.position SEPARATOR ',') FROM product_gallery g WHERE g.product_id=p.id) AS gallery_ids,
                        (SELECT COUNT(*) FROM product_favorites pf WHERE pf.product_id = p.id) AS favorite_count
                 FROM products p
                 JOIN users u ON u.id = p.seller_id
@@ -218,6 +285,11 @@ public class ProductRepository {
                 rs.getLong("off_shelf"), rs.getLong("sold"), rs.getLong("sold_price")), sellerId);
     }
 
+    public void requireNotModerated(long id) {
+        if (!jdbcTemplate.queryForList("SELECT product_id FROM product_moderation WHERE product_id=? AND state IN ('BLOCKED','APPEALED')",Long.class,id).isEmpty())
+            throw new ProductConflictException("商品受平台限制，暂不能上架或标记售出，请查看平台处理记录并申请复核");
+    }
+
     public int updateOwnedStatus(long id, long sellerId, ProductStatus status, long version) {
         return jdbcTemplate.update("""
                 UPDATE products SET status = ?, version = version + 1
@@ -227,29 +299,80 @@ public class ProductRepository {
     }
 
     public long countOnSaleBySeller(long sellerId) {
-        Long total = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM products WHERE seller_id = ? AND status = 'ON_SALE'",
-                Long.class, sellerId);
+        return countOnSaleBySeller(sellerId, null);
+    }
+
+    private static String publicSellerCategoryClause(ProductCategory category) {
+        return category == null ? "" : " AND p.category_code = ?";
+    }
+
+    public long countOnSaleBySeller(long sellerId, ProductCategory category) {
+        String sql = "SELECT COUNT(*) FROM products p WHERE p.seller_id = ? AND p.status = 'ON_SALE'";
+        Long total = category == null ? jdbcTemplate.queryForObject(sql, Long.class, sellerId)
+                : jdbcTemplate.queryForObject(sql + publicSellerCategoryClause(category), Long.class, sellerId, category.name());
         return total == null ? 0 : total;
     }
 
     public List<ProductResponse> findPublicPageBySeller(long sellerId, ProductSort sort, int size, long offset) {
+        return findPublicPageBySeller(sellerId, sort, size, offset, null);
+    }
+
+    public List<ProductResponse> findPublicPageBySeller(long sellerId, ProductSort sort, int size, long offset, ProductCategory category) {
         String sql = """
                 SELECT p.id, p.title, p.description, p.price_in_cents, p.status,
-                       p.cover_image_id, p.version, p.category_code,
-                       u.id AS seller_id, u.nickname AS seller_nickname,
+                       p.cover_image_id, p.version, p.category_code, p.campus_code, p.condition_code, p.handover_location,
+                       u.id AS seller_id, u.nickname AS seller_nickname, u.avatar_image_id AS seller_avatar, u.bio AS seller_bio, u.campus_code AS seller_campus,
+                       (SELECT GROUP_CONCAT(g.image_id ORDER BY g.position SEPARATOR ',') FROM product_gallery g WHERE g.product_id=p.id) AS gallery_ids,
                        (SELECT COUNT(*) FROM product_favorites pf WHERE pf.product_id = p.id) AS favorite_count
                 FROM products p JOIN users u ON u.id = p.seller_id
                 WHERE p.seller_id = ? AND p.status = 'ON_SALE'
                 """;
-        sql += " ORDER BY " + sort.orderBy() + " LIMIT ? OFFSET ?";
-        return jdbcTemplate.query(sql, this::mapProduct, sellerId, size, offset);
+        List<Object> args = new ArrayList<>(); args.add(sellerId);
+        if (category != null) args.add(category.name());
+        args.add(size); args.add(offset);
+        sql += publicSellerCategoryClause(category) + " ORDER BY " + sort.orderBy() + " LIMIT ? OFFSET ?";
+        return jdbcTemplate.query(sql, this::mapProduct, args.toArray());
     }
 
+    // A single read of public products; request order is restored by the service.
+    public List<ProductResponse> findPublicByIds(List<Long> ids) {
+        String placeholders = String.join(",", java.util.Collections.nCopies(ids.size(), "?"));
+        String sql = """
+                SELECT p.id, p.title, p.description, p.price_in_cents, p.status,
+                       p.cover_image_id, p.version, p.category_code, p.campus_code, p.condition_code, p.handover_location,
+                       u.id AS seller_id, u.nickname AS seller_nickname, u.avatar_image_id AS seller_avatar, u.bio AS seller_bio, u.campus_code AS seller_campus,
+                       (SELECT GROUP_CONCAT(g.image_id ORDER BY g.position SEPARATOR ',') FROM product_gallery g WHERE g.product_id=p.id) AS gallery_ids,
+                       (SELECT COUNT(*) FROM product_favorites pf WHERE pf.product_id = p.id) AS favorite_count
+                FROM products p LEFT JOIN users u ON u.id = p.seller_id
+                WHERE p.status = 'ON_SALE' AND p.id IN (
+                """ + placeholders + ")";
+        return jdbcTemplate.query(sql, this::mapProduct, ids.toArray());
+    }
+
+    public void saveDetails(long id,ProductDetails details) {
+        jdbcTemplate.update("UPDATE products SET campus_code=?,condition_code=?,handover_location=? WHERE id=?",details.campusCode(),details.conditionCode(),details.handoverLocation(),id);
+        jdbcTemplate.update("DELETE FROM product_gallery WHERE product_id=?",id);
+        for(int position=0;position<details.imageIds().size();position++)jdbcTemplate.update("INSERT INTO product_gallery(product_id,position,image_id) VALUES(?,?,?)",id,position,details.imageIds().get(position));
+    }
+    public ProductPageResponse campusPage(String keyword,String category,String campus,ProductSort sort,int page,int size) {
+        String where=" WHERE p.status='ON_SALE' AND p.title LIKE ? ESCAPE '!' AND p.campus_code=?";
+        var args=new ArrayList<Object>();args.add(searchPattern(keyword));args.add(campus);
+        if(!category.isEmpty()){where+=" AND p.category_code=?";args.add(category);}
+        long total=jdbcTemplate.queryForObject("SELECT COUNT(*) FROM products p"+where,Long.class,args.toArray());
+        args.add(size);args.add((long)(page-1)*size);
+        String sql="""
+          SELECT p.id,p.title,p.description,p.price_in_cents,p.status,p.cover_image_id,p.version,p.category_code,p.campus_code,p.condition_code,p.handover_location,
+           u.id AS seller_id,u.nickname AS seller_nickname,u.avatar_image_id AS seller_avatar,u.bio AS seller_bio,u.campus_code AS seller_campus,
+           (SELECT GROUP_CONCAT(g.image_id ORDER BY g.position SEPARATOR ',') FROM product_gallery g WHERE g.product_id=p.id) AS gallery_ids,
+           (SELECT COUNT(*) FROM product_favorites f WHERE f.product_id=p.id) AS favorite_count
+          FROM products p LEFT JOIN users u ON u.id=p.seller_id
+          """+where+" ORDER BY "+sort.orderBy()+" LIMIT ? OFFSET ?";
+        return new ProductPageResponse(jdbcTemplate.query(sql,this::mapProduct,args.toArray()),total,page,size);
+    }
     public ProductResponse mapProduct(ResultSet rs, int rowNum) throws SQLException {
         Long sellerId = rs.getObject("seller_id", Long.class);
         SellerResponse seller = sellerId == null ? null
-                : new SellerResponse(sellerId, rs.getString("seller_nickname"));
+                : new SellerResponse(sellerId, rs.getString("seller_nickname"),rs.getString("seller_avatar"),rs.getString("seller_bio"),rs.getString("seller_campus"));
         return new ProductResponse(
                 rs.getLong("id"), rs.getString("title"),
                 rs.getString("description"), rs.getLong("price_in_cents"), seller,
@@ -257,7 +380,8 @@ public class ProductRepository {
                 rs.getString("cover_image_id"),
                 rs.getString("cover_image_id") == null ? null : "/api/images/" + rs.getString("cover_image_id"),
                 rs.getLong("version"), ProductCategory.parse(rs.getString("category_code")).response(),
-                rs.getLong("favorite_count")
+                rs.getLong("favorite_count"), new ProductDetails(rs.getString("campus_code"),rs.getString("condition_code"),rs.getString("handover_location"),
+                rs.getString("gallery_ids")==null?ProductDetails.legacy(rs.getString("cover_image_id")).imageIds():List.of(rs.getString("gallery_ids").split(",")))
         );
     }
 }

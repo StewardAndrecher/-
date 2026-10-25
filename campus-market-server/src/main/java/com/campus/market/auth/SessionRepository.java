@@ -15,6 +15,13 @@ public class SessionRepository {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    // Session issuance and revoke-others use the same account lock.
+    public void lockUser(long userId) {
+        if (jdbcTemplate.queryForList("SELECT id FROM users WHERE id=? FOR UPDATE", Long.class, userId).isEmpty()) {
+            throw new LoginRequiredException();
+        }
+    }
+
     public void insert(String tokenHash, long userId) {
         jdbcTemplate.update("""
                 INSERT INTO login_sessions (token_hash, user_id, expires_at)

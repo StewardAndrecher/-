@@ -4,8 +4,8 @@ from pathlib import Path
 import hashlib,json,os,re,shutil,signal,subprocess,time,xml.etree.ElementTree as ET
 
 DOCS_CLASSES={'ApiDocsAccessFilterTest','ApiContractIntegrationTest','ApiDocsDisabledIntegrationTest'}
-QUICK_CLASSES={'PasswordConfigTest','RequestCorrelationFilterTest','ApiDocsAccessFilterTest','OrderMqLogTest','OrderMqMetricsTest','OrderMqMonitorTest','OrderTimeoutSenderTest','MetricsControllerTest'}
-IGNORED={'.git','.idea','.vscode','target','data','node_modules','__pycache__'}
+QUICK_CLASSES={'ProductionEnvironmentGuardTest','TradeCapabilitiesControllerTest','RegistrationMetricsTest','NotificationMetricsTest','NotificationMonitorTest','PasswordConfigTest','RequestCorrelationFilterTest','ApiDocsAccessFilterTest','OrderMqLogTest','OrderMqMetricsTest','OrderMqMonitorTest','OrderTimeoutSenderTest','MetricsControllerTest'}
+IGNORED={'.git','.idea','.vscode','target','data','node_modules','__pycache__','.DS_Store'}
 ENV_KEYS={'PATH','HOME','USER','LOGNAME','SHELL','JAVA_HOME','LANG','LC_ALL','LC_CTYPE','TMPDIR','TMP','TEMP','HOMEBREW_PREFIX','__CF_USER_TEXT_ENCODING'}
 
 def isolated_environment(source):

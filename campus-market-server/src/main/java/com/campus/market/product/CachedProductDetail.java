@@ -3,8 +3,10 @@ package com.campus.market.product;
 /** 只保存曾经公开的商品正文；不保存账号、会话、卖家昵称或收藏数。 */
 public record CachedProductDetail(long id, String title, String description,
                                   long priceInCents, String coverImageId,
-                                  long version, ProductCategory category) {
+                                  long version, ProductCategory category, ProductDetails details) {
+    public CachedProductDetail(long id,String title,String description,long priceInCents,String coverImageId,long version,ProductCategory category) {this(id,title,description,priceInCents,coverImageId,version,category,ProductDetails.legacy(coverImageId));}
     public CachedProductDetail {
+        details=ProductDetails.validate(details,coverImageId);
         if (id <= 0 || version < 0 || version > 9_007_199_254_740_991L
                 || title == null || title.length() < 2 || title.length() > 50
                 || description == null || description.length() > 500
@@ -23,7 +25,7 @@ public record CachedProductDetail(long id, String title, String description,
         }
         return new CachedProductDetail(product.id(), product.title(), product.description(),
                 product.priceInCents(), product.coverImageId(), product.version(),
-                ProductCategory.valueOf(product.category().code()));
+                ProductCategory.valueOf(product.category().code()),product.details());
     }
 
     public ProductResponse response(ProductDetailState state) {
@@ -32,6 +34,6 @@ public record CachedProductDetail(long id, String title, String description,
         }
         String url = coverImageId == null ? null : "/api/images/" + coverImageId;
         return new ProductResponse(id, title, description, priceInCents, state.seller(),
-                state.status(), coverImageId, url, version, category.response(), state.favoriteCount());
+                state.status(), coverImageId, url, version, category.response(), state.favoriteCount(),details);
     }
 }

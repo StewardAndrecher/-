@@ -29,7 +29,7 @@ def validate(raw):
   if not isinstance(a,dict) or a.get('status') not in ['firing','resolved']:raise ValueError('invalid alert')
   ls=labels(a.get('labels'))
   if ls.get('job')!='campus-market' or not re.fullmatch(r'Campus[A-Za-z0-9_]{1,120}',ls.get('alertname','')):raise ValueError('unexpected project')
-  if ls.get('severity') not in ['warning','critical'] or ls.get('component') not in ['application','mq','outbox']:raise ValueError('unexpected classification')
+  if ls.get('severity') not in ['warning','critical'] or ls.get('component') not in ['application','mq','outbox','notification','registration']:raise ValueError('unexpected classification')
   fp=text(a.get('fingerprint'),16)
   if not re.fullmatch('[0-9a-f]{16}',fp):raise ValueError('invalid fingerprint')
   annotations=a.get('annotations',{})

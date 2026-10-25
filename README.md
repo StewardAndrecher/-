@@ -1,158 +1,167 @@
-# Campus Market · 校园二手交易平台
+<div align="center">
 
-![Campus Market 项目概览](docs/assets/project-overview.svg)
+# 校园集市 · Campus Market
 
-[![Backend quick checks](https://github.com/StewardAndrecher/-/actions/workflows/backend-quick.yml/badge.svg)](https://github.com/StewardAndrecher/-/actions/workflows/backend-quick.yml)
+**让闲置物品在校园里继续被使用。**
 
-**Java 17 / Spring Boot + MySQL + Redis + RabbitMQ + Vue 3 / uni-app + Electron。** 面向校园闲置交易，实现商品管理、买卖沟通、订单流转和进度记录，复用同一套前端业务代码覆盖Web、微信小程序、App资源与Mac桌面端。
+Java 后端 × uni-app 多端前端 × Electron 桌面端的校园二手交易项目
 
-[技术栈](#tech-stack) · [工程亮点](#engineering) · [实际截图](#screenshots) · [启动指南](docs/GETTING_STARTED.md) · [架构与源码索引](docs/TECH_STACK.md) · [测试与验收](docs/VERIFICATION.md)
+![Java 17](https://img.shields.io/badge/Java-17-ED8B00?style=flat-square)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.1-6DB33F?style=flat-square)
+![Vue 3](https://img.shields.io/badge/Vue-3-42B883?style=flat-square)
+![uni-app](https://img.shields.io/badge/uni--app-多端开发-2B80FF?style=flat-square)
+![MySQL](https://img.shields.io/badge/MySQL-InnoDB-4479A1?style=flat-square)
+![Redis](https://img.shields.io/badge/Redis-缓存与限流-DC382D?style=flat-square)
+![RabbitMQ](https://img.shields.io/badge/RabbitMQ-异步消息-FF6600?style=flat-square)
+![Electron](https://img.shields.io/badge/Electron-桌面端-47848F?style=flat-square)
 
-仓库包含截至第82课的完整源码、25份有序建库脚本、测试入口和实际验收截图。业务服务目前在本机运行，GitHub链接用于源码与项目展示。
+[项目展示](#项目展示) · [技术实现](#我在项目里重点练习了什么) · [本地运行](docs/GETTING_STARTED.md) · [验收记录](docs/VERIFICATION.md) · [源码导航](docs/TECH_STACK.md)
 
-<a id="tech-stack"></a>
+[![Backend checks](https://github.com/StewardAndrecher/-/actions/workflows/backend-quick.yml/badge.svg)](https://github.com/StewardAndrecher/-/actions/workflows/backend-quick.yml)
+[![Client checks](https://github.com/StewardAndrecher/-/actions/workflows/client-desktop-quick.yml/badge.svg)](https://github.com/StewardAndrecher/-/actions/workflows/client-desktop-quick.yml)
+[![Full checks](https://github.com/StewardAndrecher/-/actions/workflows/release-quality.yml/badge.svg)](https://github.com/StewardAndrecher/-/actions/workflows/release-quality.yml)
 
-## 技术栈
+</div>
 
-| 层次 | 实际使用 | 项目中的职责 |
-|---|---|---|
-| 共享前端 | Vue 3、Composition API、JavaScript、uni-app | 共享页面与组件，多端条件编译、统一请求、内存会话与异步响应保护 |
-| 后端 | Java 17、Spring Boot 4.1.1、Spring MVC | REST API，Controller / Service / Repository分层，参数、权限及异常处理 |
-| 数据库 | MySQL / InnoDB、Spring JDBC / JdbcTemplate | 参数化SQL、事务与行锁、版本条件更新、唯一约束、聚合与稳定分页 |
-| Redis | Spring Data Redis、Lettuce、Lua | 商品正文版本缓存、TTL抖动、提交后失效；独立实例的登录限流与并发占位 |
-| 消息队列 | RabbitMQ、Spring AMQP、Quorum、TTL / DLX | 订单延迟关闭、事务Outbox、确认与退回检查、租约重试、幂等消费 |
-| 身份认证 | BCrypt、随机Bearer会话、SHA-256摘要 | 密码哈希、会话过期/退出，按当前账号校验资源归属 |
-| 桌面 | Electron 44.7.0、Node.js、Electron Packager | 复用H5，Mac ARM64打包、回环静态服务、窗口和请求权限限制 |
-| 可观测性 | Micrometer、Prometheus、Grafana、Alertmanager | MQ/Outbox指标、15面板、8条告警规则、分组抑制与恢复通知、本机SQLite历史 |
-| 接口与追踪 | springdoc-openapi、Swagger UI、SLF4J MDC | 51个业务操作文档、HTTP请求编号、MQ异步事件关联、轮转日志 |
-| 持续集成 | GitHub Actions、Python标准库 | 73项quick基础测试、32项验收工具检查、JUnit报告归档 |
-| 验证与交付 | JUnit、MockMvc、Mockito、Node Test Runner、Maven、HBuilderX | 临时MySQL/Redis/RabbitMQ集成测试、跨端构建、源码/产物SHA-256清单 |
+## 项目介绍
 
-版本、设计与代码入口见[技术栈详解](docs/TECH_STACK.md)。
+这是我在学习 Java 和全栈开发过程中持续完善的一个项目。选校园二手交易这个场景，是因为教材、数码和宿舍用品的流转比较贴近大学生活，也能把前端页面、后端接口和数据库设计串起来。
 
-## 业务模块
+我从商品展示和发布开始，逐步补上账号、收藏、买卖沟通、订单、退款售后和管理功能。后来遇到重复提交、订单超时、消息重试、缓存一致性等问题，又加入了 Redis、RabbitMQ、事务和自动化测试。这个仓库保留了前后端源码、数据库迁移和运行工具，可以沿着一笔交易去看每一层是怎样配合的。
 
-| 模块 | 已实现能力 |
-|---|---|
-| 账号与登录保护 | 注册、登录、退出、昵称修改；来源IP和账号维度Redis限流，429/503恢复提示 |
-| 商品与发现 | 发布/封面上传、编辑、在售/下架/已售、分类、搜索、排序、分页、收藏、浏览记录、卖家主页 |
-| 发布草稿 | 按账号保存本机草稿、云端备份与恢复、搜索/分类/排序 |
-| 公开与私密沟通 | 商品留言；购买意向发起/取消/接受；意向内双方留言、幂等发送、撤回、阅读进度及未读聚合 |
-| 正式订单流程 | 版本校验与下单幂等、有效订单唯一占用、15分钟待付款超时、取消释放、模拟付款、卖家交付、买家收货 |
-| 订单查询 | 我买到的/我卖出的、六种状态筛选、分页、角色全量统计、已完成模拟交易金额 |
-| MQ超时处理 | 同事务保存待发任务，延迟队列触发关闭；断线自动重试、失败消息保留、数据库扫描补偿 |
-| 进度时间线 | 状态与记录同事务、操作人/昵称快照、系统超时记录、参与者私有查询、历史状态快照迁移 |
+目前定位是**可在本地运行和演示的全栈学习项目**。订单使用模拟付款；真实微信支付、生产服务器和公网域名尚未接入。下面展示的是已经实现的页面和业务流程。
 
-**付款目前为教学模拟，不发生真实扣款或资金结算。** 购买意向只表示沟通意愿，订单独立承担商品占用和交易状态；私密留言采用HTTP刷新。
+## 项目展示
 
-<a id="engineering"></a>
+截图来自本地运行或隔离演示环境，账号、商品及订单为演示数据；商品封面部分使用项目自制的分类占位插画。页面读取真实后端接口，不是设计稿。
 
-## 工程亮点
+### Web 首页
 
-1. **订单并发与幂等。** 下单携带商品版本和提交标识，事务按商品→订单顺序加锁；条件更新与唯一约束保证商品有效订单占用。重复付款、交付和收货返回已有结果，不重复变更或记录。
-2. **状态与记录同事务。** 创建、付款、交付、收货、取消、超时均追加操作记录，任一步失败一起回滚。订单和时间线在同一只读快照中读取；历史订单只补明确标注的状态快照。
-3. **RabbitMQ与事务Outbox。** 订单、操作记录和待发任务同事务提交，后台使用租约投递持久消息，核对Publisher Confirm和Mandatory Return。Quorum队列通过TTL / DLX触发超时检查，幂等消费防止重复变更；有限重试后进入parking，数据库扫描继续补偿。
-4. **Redis缓存一致性与降级。** 缓存键包含商品ID/版本，提交后删除旧版本键，TTL附加随机值。每次仍查数据库当前状态、版本及动态信息；Redis失败时回退数据库，未把缓存命中宣传为零SQL。
-5. **Redis Lua登录保护。** 来源预算、账号预算、在途占位与TTL一次脚本执行；成功核验按票据清理，避免并发请求越过额度。保护实例与可淘汰缓存实例分离，保护服务故障返回503。
-6. **权限与异步响应保护。** 操作身份由服务端会话确定，私密记录仅参与者可读；前端在账号切换、页面隐藏或卸载后使旧请求失效。写入成功但随后读取失败时保留已确认结果。
-7. **统计与跨端交付。** 状态过滤在SQL分页前执行，角色全量统计和列表共享事务快照；uni-app三端资源与Mac内嵌H5均生成并校验源码/产物哈希。
+响应式商品列表，支持校区、分类、搜索、排序和收藏。发布面板默认收起，点击入口后展开，快捷浏览使用平滑滚动。
 
-8. **监控与故障定位。** Prometheus采集独立鉴权指标，Grafana提供15个面板；8条告警配合Alertmanager分组、抑制与恢复通知。HTTP请求编号与MQ事件编号串联投递和消费日志，帮助从异常定位业务操作。
-9. **接口契约与分层验收。** 自动生成51个业务操作文档，开发文档默认关闭并限制本机访问；73项基础测试无需中间件，843项完整回归使用临时服务，CI复用同一验收入口。
+![校园集市 Web 实际运行首页](docs/assets/showcase-home.png)
 
-[查看架构、实现边界及对应源码](docs/TECH_STACK.md#source-map)。
+### 手机布局
 
-<a id="screenshots"></a>
+同一套 uni-app 页面在窄屏下使用双列商品卡片和底部导航。以下为 **H5 响应式页面**；微信小程序和原生 App 的验收范围见下方说明。
 
-## 实际截图
+<table>
+  <tr>
+    <td align="center"><img src="docs/assets/showcase-mobile-top.png" width="310" alt="手机宽度：首页与搜索" /><br />首页与搜索</td>
+    <td align="center"><img src="docs/assets/showcase-mobile-catalogue.png" width="310" alt="手机宽度：商品列表和底部导航" /><br />商品列表与底部导航</td>
+  </tr>
+</table>
 
-截图来自本机或隔离验收环境，订单、账号与留言用于开发演示。范围见[验收说明](docs/VERIFICATION.md)。
+### 商品与交易
 
-### MQ监控面板与自动接口文档
+商品详情包含相册、成色、校区、交接地点和卖家资料；下单后保留下单快照与操作时间线。
 
-![Grafana MQ运行监控](docs/assets/mq-grafana.png)
-
-15个面板展示采集状态、Outbox等待、队列与消费者等；8条告警规则覆盖故障场景。截图来自第76课本机验收。
-
-![Swagger商品查询真实返回200](docs/assets/swagger-products.png)
-
-第80课通过Swagger调用商品接口返回200；生成文档覆盖51个业务操作，健康和运维接口不混入业务文档。
-
-### RabbitMQ故障恢复后的订单超时关闭
-
-![MQ超时关闭与系统记录](docs/assets/order-mq-timeout.png)
-
-隔离环境停止MQ时下单返回201；恢复后Outbox自动重试，关闭到期待付款订单并释放商品占用，系统事件只记一次。验收关闭了数据库扫描，使用200毫秒TTL及测试订单时间调整；正常规则仍为15分钟。
-
-### 订单进度时间线：创建 → 模拟付款 → 交付 → 收货
-
-![订单进度时间线](docs/assets/order-timeline.png)
-
-### 状态筛选与当前角色的全量交易统计
-
-![买家订单与模拟金额统计](docs/assets/order-summary.png)
+![商品详情、卖家资料与交易入口](docs/assets/showcase-product.png)
 
 <details>
-<summary>展开：历史订单迁移、Mac桌面、双方留言与小程序截图</summary>
+<summary>查看订单详情与操作时间线</summary>
 
-**旧订单仅补历史状态快照，迁移后的操作继续追加：**
-
-![历史订单补录](docs/assets/order-history.png)
-
-**新版Mac应用实际启动、登录并读取空订单页：**
-
-![Mac订单页](docs/assets/mac-orders.png)
-
-**购买意向、未读总览与最近收到时间（第66课）：**
-
-![Web购买意向](docs/assets/web-intents.png)
-
-**意向内双方留言：**
-
-![双方留言](docs/assets/private-conversation.png)
-
-**微信开发者工具历史详情页验收（第29课）：** 当前源码已重新完成小程序编译和结构检查，未声称所有最新业务都重新做过模拟器验收。
-
-![微信开发者工具](docs/assets/weixin-simulator.png)
+![模拟订单创建、付款、交付和收货时间线](docs/assets/showcase-order.png)
 
 </details>
 
-## 运行与验证
+### 退款与售后
 
-按[启动指南](docs/GETTING_STARTED.md)建立全新MySQL数据库、启动两个独立Redis实例；启用MQ时启动项目RabbitMQ节点，在IDEA运行后端，再用HBuilderX运行前端。仓库AppID和局域网IP是示例值。
+买家提交原因和说明，卖家答复，页面保留处理记录。售后状态与订单履约状态分开保存；演示订单中“同意申请”不会被显示成“退款到账”。
 
-| 验证 | 当前通过记录 | 仓库复查入口 |
-|---|---:|---|
-| 后端集成与回归 | 843项，59个测试类；0失败/错误/跳过 | `python3 scripts/test_backend.py` |
-| 快速Java检查 | 73项，8类；不启动中间件 | `python3 scripts/test_backend.py --suite quick` |
-| 后端验收工具 | 32项 | 后端目录 `python3 -B -m unittest discover -s scripts/tests -v` |
-| 前端状态、接口与平台 | 47组 | `python3 scripts/test_frontend.py` |
-| 构建、存储、网络与请求编号工具 | 50项 | 上述前端入口一并执行 |
-| 桌面运行规则 | 17项 | 桌面目录安装依赖后 `npm test` |
+![退款售后进度与卖家答复](docs/assets/showcase-refund.png)
 
-后端验证创建临时MySQL、两个临时Redis和独立RabbitMQ节点；第82课单次完整回归843项全部通过，quick实际执行73项。本次发布副本重新通过47组前端行为、50项前端工具和17项桌面规则检查，并重新构建Web、微信和App资源。前端复查入口可重新构建三端资源。环境和验证边界见[测试说明](docs/VERIFICATION.md)。
+<details>
+<summary>更多页面：图片空间、内容治理、发布检查和 Mac 客户端</summary>
 
-| 终端 | 已验证范围 |
-|---|---|
-| Web | 业务HTTP和浏览器操作；订单时间线、MQ超时、HTTP错误请求编号和Swagger调用，详见分课证据 |
-| 微信小程序 | 当前源码编译、14页和组件结构检查；历史页面有开发者工具验收 |
-| Mac ARM64 | 新包实际启动/登录/空订单页检查，53个Web资源与源码构建一致 |
-| Android / iOS | App资源编译通过；尚未完成APK/IPA与手机验收 |
+**图片空间**：查看配额、引用状态与回收站，已引用的图片不能直接删除。
 
-## 仓库结构
+![个人图片空间](docs/assets/showcase-images.jpg)
+
+**内容与滥用治理**：管理员查看限制原因、期限和处理记录，配合举报与商品复核流程。
+
+![管理端内容与滥用治理](docs/assets/showcase-governance.jpg)
+
+**发布质量检查**：提交前检查资料完整性，后端仍独立校验权限、字段和内容规则。
+
+![发布前质量检查](docs/assets/showcase-quality.jpg)
+
+**Mac 客户端**：Electron 加载同源 Web 产物，复用已有业务页面和接口。
+
+![Mac 桌面应用实际运行](docs/assets/showcase-mac.jpg)
+
+**消息与监控**：订单超时消息投递、消费和积压情况可在本地监控面板中查看。
+
+![RabbitMQ 业务监控面板](docs/assets/mq-grafana.png)
+
+</details>
+
+## 已实现的功能
+
+| 使用场景 | 主要功能 |
+| --- | --- |
+| 账号与个人资料 | 注册登录、BCrypt 密码哈希、会话列表与撤销、改密、恢复码、邮箱绑定与验证码找回流程、昵称/头像/校区/简介 |
+| 发现与发布 | 分类和校区筛选、关键词搜索、排序、连续浏览、收藏、浏览历史、多图商品、成色与交接地点、本地及云端草稿、发布前检查 |
+| 买卖沟通 | 公开留言、购买意向、意向内私信、撤回、未读提示与站内通知；私信通过 HTTP 刷新获取 |
+| 交易与售后 | 幂等下单、15 分钟未付款关闭、模拟付款、交付/收货、订单快照与时间线、评价、退款申请及卖家处理、交易问题反馈 |
+| 管理与治理 | ADMIN 授权、商品巡查与复核、举报处理、交易问题处理、账号发布限制、操作审计 |
+| 图片与运维 | 图片配额及引用保护、回收站、数据库版本迁移、SQL 与图片联合备份/恢复、历史数据清理预览、发布质量检查 |
+
+## 技术栈
+
+| 部分 | 技术与用途 |
+| --- | --- |
+| 前端 | **uni-app、Vue 3、JavaScript、CSS**：Web / 微信小程序 / App 共用页面，按平台处理连接地址和交互差异 |
+| 后端 | **Java 17、Spring Boot 4.1.1、Spring MVC、Spring JDBC**：REST 接口、参数校验、事务与数据访问 |
+| 数据库 | **MySQL、InnoDB、Flyway**：版本迁移、外键/唯一约束、行锁、复合索引、游标分页 |
+| 缓存与保护 | **Redis、Lua**：商品详情版本缓存；独立实例处理登录与注册频率限制 |
+| 消息 | **RabbitMQ、Spring AMQP**：订单超时、站内通知、Outbox、发布确认、重试与幂等消费 |
+| 桌面端 | **Electron**：复用 Web 构建，本地静态服务、窗口隔离与请求白名单 |
+| 工程与观测 | **JUnit、Node Test Runner、Python 工具、GitHub Actions、OpenAPI、Prometheus / Grafana / Alertmanager** |
+
+## 我在项目里重点练习了什么
+
+- **让一笔订单有明确的状态和边界。** 下单时校验商品版本并锁定相关记录，使用请求幂等键和数据库约束处理重复提交；交易状态变化与事件记录在同一事务完成。[订单实现](campus-market-server/src/main/java/com/campus/market/order/OrderService.java)
+- **让异步任务失败后还能继续处理。** 业务操作与 Outbox 同事务落库，再由独立投递器发消息；结合发布确认、租约、重试、幂等消费和数据库扫描补偿处理超时关单。[订单 MQ 实现](campus-market-server/src/main/java/com/campus/market/order/mq)
+- **理解缓存与数据库的职责。** 商品详情按版本缓存，事务提交后再失效；数据库决定商品是否可见。登录保护与可淘汰缓存分实例，避免限流记录被缓存淘汰策略影响。[缓存实现](campus-market-server/src/main/java/com/campus/market/product/ProductDetailCache.java) · [登录保护](campus-market-server/src/main/java/com/campus/market/auth/LoginRateLimiter.java)
+- **把权限与用户身份放在服务端检查。** 使用随机会话令牌，校验商品归属、订单双方和管理员角色；页面隐藏按钮之外，接口仍检查越权、版本冲突和重复请求。[账号与会话](campus-market-server/src/main/java/com/campus/market/auth)
+- **把数据恢复也作为功能来验证。** 数据库与图片一起备份，使用摘要核验并恢复到全新隔离库；运行、迁移、备份和维护账号分别授权。资金数据保留证据和借贷分录，模拟与真实账簿分开。[数据库设计与演练](campus-market-server/docs/database-maturity.md)
+- **先看执行计划再加索引。** 在 10 万商品、10 万订单的合成数据上比较执行计划，为买家/卖家状态分页补复合索引。关键词包含查询仍有扫描成本，后续需要继续优化。[本地 SQL 测量记录](docs/VERIFICATION.md#数据库演练与查询测量)
+
+## 项目结构
 
 ```text
-campus-market-client/     uni-app页面、组件、API及构建工具
-campus-market-server/     Spring Boot、Redis/Lua、RabbitMQ、SQL与JUnit测试
-campus-market-desktop/    Electron主进程、静态服务与桌面测试
-scripts/                 全新建库、隔离后端及前端验证入口
-docs/                    架构、启动指南、验收与实际截图
+campus-market-client/    uni-app 页面、组件、接口、状态处理与前端测试
+campus-market-server/    Spring Boot 服务、Flyway 迁移、集成测试与运维工具
+campus-market-desktop/   Electron 主进程、Web 产物同步与桌面测试
+.github/workflows/      后端快速检查、前端/桌面检查、完整后端回归
+scripts/                仓库级前端检查入口与新库 SQL 初始化参考
+docs/                  运行说明、技术导航、验收摘要和真实截图
 ```
 
-当前尚未接入真实支付、退款售后、WebSocket实时推送、线上部署或大规模性能压测。操作记录为应用层只追加，数据库管理员仍可修改，删除订单会级联删除记录；未将其描述为不可篡改存证。
+[查看架构图和源码入口 →](docs/TECH_STACK.md)
 
-消息采用至少一次投递与幂等业务效果；当前RabbitMQ为本机单节点，未验收集群高可用，也没有吞吐提升倍数声明。
+## 本地运行
 
-GitHub Actions在push、pull_request或手动触发时运行快速检查；当前云端状态见上方徽章及[Actions页面](https://github.com/StewardAndrecher/-/actions)。快速检查不能替代完整集成回归。
+1. 克隆仓库，准备 Java 17、Maven、MySQL、Redis 和 HBuilderX。
+2. 建立空的开发数据库，配置本机凭据并通过 Flyway 初始化；启动两个独立 Redis 实例和后端。
+3. 在 HBuilderX 导入 `campus-market-client`，运行到浏览器；小程序需填写自己的 AppID。
+4. 可选启动 RabbitMQ、邮件服务与 Electron，查看相应场景。
 
-源码和结构SQL公开；真实数据库、会话、MQ凭证/Cookie/磁盘消息、图片上传目录、IDE配置、依赖、运行日志及安装包保留本机。
+**完整步骤、配置变量与验证命令：[GETTING_STARTED.md](docs/GETTING_STARTED.md)。** 仓库不提供真实账号、私有数据库和支付密钥。
+
+## 验证与当前边界
+
+本地验证记录更新于 **2026-10-25**。后端完整测试覆盖 109 类、1973 项；最近一次记录由完整执行与受影响的 35 项通知测试重跑合并确认，详细过程没有省略。前端与桌面逻辑检查共 1105 项，另外保留后端快速检查、工具测试、跨端编译和数据库恢复演练记录。**具体范围和限制见 [验收记录](docs/VERIFICATION.md)**；上方 CI 徽章展示 GitHub 上实际运行的状态。
+
+| 项目 | 当前范围 |
+| --- | --- |
+| Web | 本地浏览器真实页面与接口验收；支持电脑和手机宽度 |
+| 微信小程序 | 已编译并完成部分开发者工具场景验收；当前 50 个页面没有逐页做真机验收，未上线发布 |
+| 原生 App | 已通过 App 资源编译与静态检查；未完成 Android / iOS 真机和 APK / IPA 发布验收 |
+| 桌面端 | 本地 Mac ARM64 运行及打包验收；未签名、公证，未验收 Windows / Linux 安装包 |
+| 支付与售后 | 已实现模拟交易、售后流程和支付数据模型；未接真实支付、原路退款与卖家结算 |
+| 邮件与微信身份 | 邮箱流程与 SMTP 适配器已实现，真实邮件服务未配置；微信身份关联模型已建，OAuth 未接入 |
+| 存储与部署 | 图片存本地；已提供生产配置、备份定时模板与隔离演练，正式服务器、定时任务、异地备份尚未部署 |
+
+接下来会优先完善实际部署和运维验证，再按正式商户条件接入真实支付，继续补齐移动端真机测试与图片对象存储。

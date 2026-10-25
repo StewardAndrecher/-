@@ -31,6 +31,7 @@ public class LoginController {
             consumes = "application/json",
             produces = "application/json;charset=UTF-8"
     )
+    @org.springframework.transaction.annotation.Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public ResponseEntity<LoginResponse> login(@RequestBody LoginUserRequest request, HttpServletRequest servletRequest) {
         UserResponse user = loginService.login(request, servletRequest.getRemoteAddr());
         LoginResponse response = sessionService.issueToken(user);

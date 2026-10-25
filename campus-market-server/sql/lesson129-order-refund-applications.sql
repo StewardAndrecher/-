@@ -1,0 +1,47 @@
+USE campus_market;
+-- Refund application workflow only; no payment-provider execution or "credited" flag.
+CREATE TABLE order_refunds (
+ id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+ order_id BIGINT NOT NULL,
+ buyer_id BIGINT NOT NULL,
+ seller_id BIGINT NOT NULL,
+ request_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ amount_in_cents BIGINT NOT NULL,
+ reason VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ description VARCHAR(1000) NOT NULL,
+ status VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'REQUESTED',
+ version BIGINT NOT NULL DEFAULT 0,
+ explanation VARCHAR(1000) NOT NULL DEFAULT '',
+ payment_kind VARCHAR(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ created_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+ updated_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+ active_order_id BIGINT GENERATED ALWAYS AS (CASE WHEN status IN ('REQUESTED','APPROVED') THEN order_id ELSE NULL END) STORED,
+ UNIQUE KEY uk_refund_request(buyer_id,request_id),
+ UNIQUE KEY uk_refund_active_order(active_order_id),
+ KEY idx_refund_buyer(buyer_id,id DESC),
+ KEY idx_refund_seller(seller_id,id DESC),
+ KEY idx_refund_order(order_id,id DESC),
+ CONSTRAINT fk_refund_order FOREIGN KEY(order_id) REFERENCES market_orders(id),
+ CONSTRAINT fk_refund_buyer FOREIGN KEY(buyer_id) REFERENCES users(id),
+ CONSTRAINT fk_refund_seller FOREIGN KEY(seller_id) REFERENCES users(id),
+ CONSTRAINT chk_refund_status CHECK(status IN ('REQUESTED','APPROVED','REJECTED','WITHDRAWN')),
+ CONSTRAINT chk_refund_reason CHECK(reason IN ('NOT_AS_DESCRIBED','DAMAGED','HANDOVER','OTHER')),
+ CONSTRAINT chk_refund_amount CHECK(amount_in_cents BETWEEN 1 AND 99999999),
+ CONSTRAINT chk_refund_version CHECK(version BETWEEN 0 AND 9007199254740991),
+ CONSTRAINT chk_refund_demo CHECK(payment_kind='SIMULATED'),
+ CONSTRAINT chk_refund_participants CHECK(buyer_id<>seller_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE order_refund_events (
+ id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+ refund_id BIGINT NOT NULL,
+ actor_id BIGINT NOT NULL,
+ actor_role VARCHAR(8) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ action VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ explanation VARCHAR(1000) NOT NULL,
+ created_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+ KEY idx_refund_events(refund_id,id),
+ CONSTRAINT fk_refund_event FOREIGN KEY(refund_id) REFERENCES order_refunds(id),
+ CONSTRAINT fk_refund_actor FOREIGN KEY(actor_id) REFERENCES users(id),
+ CONSTRAINT chk_refund_event_role CHECK(actor_role IN ('BUYER','SELLER')),
+ CONSTRAINT chk_refund_event_action CHECK(action IN ('REQUESTED','APPROVED','REJECTED','WITHDRAWN'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

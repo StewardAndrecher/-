@@ -1,0 +1,19 @@
+package com.campus.market.order;
+
+import org.springframework.http.*;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/orders/issues")
+@CrossOrigin(originPatterns={"http://localhost:[*]","http://127.0.0.1:[*]"})
+public class OrderIssueListController {
+    private final OrderIssueListService service;
+    public OrderIssueListController(OrderIssueListService service){this.service=service;}
+    @GetMapping(produces="application/json;charset=UTF-8")
+    public ResponseEntity<OrderIssueListModels.Page> ownOrderIssues(
+            @RequestParam(defaultValue="BUYER")String role,@RequestParam(defaultValue="ALL")String status,
+            @RequestParam(defaultValue="1")int page,@RequestParam(defaultValue="10")int size,
+            @RequestHeader(value="Authorization",required=false)String auth) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.page(role,status,page,size,auth));
+    }
+}

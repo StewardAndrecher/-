@@ -20,3 +20,8 @@ sum(rate(campus_order_mq_publish_total{result="failed"}[5m]))
 
 # 最近5分钟的平均消费耗时（秒）；没有调用时分母为零，结果NaN
 sum(rate(campus_order_mq_consume_duration_seconds_sum[5m])) / sum(rate(campus_order_mq_consume_duration_seconds_count[5m]))
+
+# 第114课：注册保护判断；allowed 不等于注册成功，重启归零，先rate再sum。
+campus_registration_protection_enabled{job="campus-market"}
+sum by(outcome) (rate(campus_registration_decisions_total{job="campus-market"}[5m]))
+increase(campus_registration_decisions_total{job="campus-market",outcome="unavailable"}[5m])

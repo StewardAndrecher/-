@@ -1,0 +1,52 @@
+name: Full release quality checks
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: full-quality-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  regression-and-package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      - name: Install isolated test prerequisites
+        run: sudo apt-get update && sudo apt-get install -y mysql-server redis-server rabbitmq-server
+      - name: Verify tooling
+        run: |
+          python3 -B -m unittest discover -s campus-market-server/scripts/tests -v
+          python3 -B -m unittest discover -s campus-market-client/tools/tests -v
+      - name: Full backend regression against disposable services
+        run: python3 -B campus-market-server/scripts/test_backend.py
+      - name: Full client and desktop logic regression
+        run: python3 -B campus-market-client/tools/test_quick.py
+      - name: Build verified backend release ZIP
+        run: python3 -B campus-market-server/scripts/build_release.py
+      - name: Save reports and server package
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: full-quality-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            campus-market-server/data/test-results/*/summary.json
+            campus-market-server/data/test-results/*/junit/*.xml
+            campus-market-server/data/releases/*/release.zip
+            campus-market-server/data/releases/*/summary.json
+            campus-market-client/unpackage/quick-tests/*/summary.json
+          retention-days: 7
+# HBuilderX multi-platform builds and release_quality.py run on the configured local release host.
+# This workflow never deploys a public service or uses production credentials.

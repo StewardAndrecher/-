@@ -1,6 +1,6 @@
 {
     "name" : "校园集市",
-    "appid" : "__UNI__CAMPUSDEMO",
+    "appid" : "",
     "description" : "校园二手交易平台：商品发布、收藏、留言与多端浏览",
     "versionName" : "1.0.0",
     "versionCode" : "100",
@@ -50,7 +50,7 @@
     "quickapp" : {},
     /* 小程序特有相关 */
     "mp-weixin" : {
-        "appid" : "wx0000000000000000",
+        "appid" : "",
         "setting" : {
             "urlCheck" : false
         },

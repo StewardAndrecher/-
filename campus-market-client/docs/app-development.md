@@ -22,7 +22,7 @@ appRelease保持空值，因为还没有部署正式HTTPS后端。配置器要�
 
 ## AppID与网络限制
 
-DCloud AppID为manifest.json顶层appid（__UNI__CAMPUSDEMO）；微信AppID为mp-weixin.appid（wx0000000000000000），两者各自使用，不能替换。
+DCloud AppID为manifest.json顶层appid（__UNI__YOUR_APP_ID）；微信AppID为mp-weixin.appid（wxYOUR_MINIPROGRAM_APPID），两者各自使用，不能替换。
 
 本课更新应用名称/描述，未修改原生权限、Android网络策略、iOS ATS或签名配置。原生系统/基座可能限制开发HTTP连接；未来手机验收如有错误，应根据真实日志检查，而不是先放开全部网络权限。
 

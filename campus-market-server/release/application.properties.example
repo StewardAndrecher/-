@@ -1,0 +1,28 @@
+# Copy outside the release bundle to runtime/application.properties and supply environment values.
+server.address=127.0.0.1
+server.port=8080
+spring.datasource.url=${DB_URL}
+spring.datasource.username=${DB_USERNAME}
+spring.datasource.password=${DB_PASSWORD}
+market.upload-dir=${UPLOAD_DIR}
+logging.file.name=${APP_LOG_FILE}
+
+# Keep the existing independent login-protection Redis instance available.
+market.login-protection.enabled=true
+market.orders.simulated-payment-enabled=false
+market.orders.mq.enabled=${ORDER_MQ_ENABLED:false}
+market.monitoring.enabled=false
+springdoc.api-docs.enabled=false
+springdoc.swagger-ui.enabled=false
+
+market.notifications.mq.enabled=${NOTIFICATION_MQ_ENABLED:${ORDER_MQ_ENABLED:false}}
+market.notifications.mq.prefix=${NOTIFICATION_MQ_PREFIX:campus.notification.v1}
+
+# 第94课：独立通知监控线程；只读采样，不在指标请求内访问中间件。
+market.notifications.monitor.poll-delay-ms=15000
+market.notifications.monitor.initial-delay-ms=1000
+
+# Registration shares the existing login-protection Redis connection.
+market.registration-protection.enabled=${REGISTRATION_PROTECTION_ENABLED:${market.login-protection.enabled}}
+market.registration-protection.limit=${REGISTRATION_LIMIT:60}
+market.registration-protection.window-seconds=${REGISTRATION_WINDOW_SECONDS:60}

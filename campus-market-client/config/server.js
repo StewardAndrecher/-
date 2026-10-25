@@ -1,3 +1,5 @@
+import { resolveWebEndpoint } from '@/utils/web-endpoint.mjs'
+
 // 开发者工具连接本机；手机开发版连接电脑当前的局域网地址。
 export const SERVER_ENDPOINTS = Object.freeze({
   web: 'http://localhost:8080',
@@ -65,7 +67,16 @@ try { devicePlatform = uni.getDeviceInfo().platform }
 catch { devicePlatform = '' }
 // #endif
 
-export const SERVER_CONFIG = resolveServerConfig(platform, envVersion, SERVER_ENDPOINTS, devicePlatform)
+let effectiveEndpoints = SERVER_ENDPOINTS
+let webConfigurationError = ''
+// #ifdef H5
+const webEndpoint = resolveWebEndpoint(typeof window !== 'undefined' ? window.location : null, SERVER_ENDPOINTS.web)
+effectiveEndpoints = { ...SERVER_ENDPOINTS, web: webEndpoint.baseUrl }
+webConfigurationError = webEndpoint.error
+// #endif
+const resolvedConfig = resolveServerConfig(platform, envVersion, effectiveEndpoints, devicePlatform)
+export const SERVER_CONFIG = webConfigurationError
+  ? Object.freeze({ ...resolvedConfig, baseUrl: '', error: webConfigurationError }) : resolvedConfig
 export const API_BASE_URL = SERVER_CONFIG.baseUrl
 
 export const DIAGNOSTICS_ENABLED = platform === 'web' ? process.env.NODE_ENV !== 'production'

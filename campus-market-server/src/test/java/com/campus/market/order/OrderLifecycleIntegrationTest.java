@@ -34,7 +34,7 @@ class OrderLifecycleIntegrationTest {
  @BeforeAll void hash(){hash=encoder.encode("Campus2026!");}
  @BeforeEach void fixtures()throws Exception {
   assertTrue(System.getenv("LESSON70_DB_URL").contains("/campus_lesson70_verify?"));
-  jdbc.update("DELETE FROM market_orders");jdbc.update("DELETE FROM product_comments");jdbc.update("DELETE FROM product_favorites");jdbc.update("DELETE FROM purchase_intents");jdbc.update("DELETE FROM products");jdbc.update("DELETE FROM login_sessions");jdbc.update("DELETE FROM users");
+  com.campus.market.support.FinancialFixtureCleanup.clear(jdbc);jdbc.update("DELETE FROM market_orders");jdbc.update("DELETE FROM product_comments");jdbc.update("DELETE FROM product_favorites");jdbc.update("DELETE FROM purchase_intents");jdbc.update("DELETE FROM products");jdbc.update("DELETE FROM login_sessions");jdbc.update("DELETE FROM users");
   seller=user("order_seller");buyer=user("order_buyer");other=user("order_other");
   sellerToken=token(seller,"order_seller");buyerToken=token(buyer,"order_buyer");otherToken=token(other,"order_other");
   product=repository.insert("订单教材","原始描述",3500,seller,null,"BOOK");
@@ -88,4 +88,16 @@ class OrderLifecycleIntegrationTest {
 
  @Test void disabledSimulationCannotChangeAnyOrder()throws Exception{long id=created();org.springframework.test.util.ReflectionTestUtils.setField(service,"simulatedPaymentEnabled",false);try{pay(id,buyerToken,503);assertEquals("PENDING_PAYMENT",status(id));assertEquals(1,version());}finally{org.springframework.test.util.ReflectionTestUtils.setField(service,"simulatedPaymentEnabled",true);}}
 
+
+ @Test void disabledCheckoutDoesNotReserveProductOrWriteOrder()throws Exception {
+  org.springframework.test.util.ReflectionTestUtils.setField(service,"simulatedPaymentEnabled",false);
+  try {var error=check(create(product,0,uuid(),buyerToken),503);assertEquals("PAYMENT_UNAVAILABLE",error.get("code").asString());assertEquals(0,count());assertEquals(0,version());}
+  finally {org.springframework.test.util.ReflectionTestUtils.setField(service,"simulatedPaymentEnabled",true);}
+ }
+ @Test void existingIdempotentOrderCanBeRecoveredWhenCheckoutDisabled()throws Exception {
+  String key=uuid();long id=check(create(product,0,key,buyerToken),201).get("order").get("id").asLong();
+  org.springframework.test.util.ReflectionTestUtils.setField(service,"simulatedPaymentEnabled",false);
+  try {var replay=check(create(product,0,key,buyerToken),200);assertEquals(id,replay.get("order").get("id").asLong());assertTrue(replay.get("replayed").asBoolean());assertEquals(1,count());assertEquals(1,version());}
+  finally {org.springframework.test.util.ReflectionTestUtils.setField(service,"simulatedPaymentEnabled",true);}
+ }
 }

@@ -44,7 +44,7 @@ class OrderMqIntegrationTest {
   assertTrue(System.getenv("LESSON74_DB_URL").contains("/campus_lesson74_verify?"));
   assertEquals("/campus-lesson74-verify",System.getenv("LESSON74_MQ_VHOST"));
   listeners.stop();for(String queue:List.of(settings.delayQueue(),settings.workQueue(),settings.parkingQueue()))admin.purgeQueue(queue,true);
-  jdbc.update("DELETE FROM market_orders");jdbc.update("DELETE FROM product_comments");jdbc.update("DELETE FROM product_favorites");jdbc.update("DELETE FROM purchase_intents");jdbc.update("DELETE FROM products");jdbc.update("DELETE FROM login_sessions");jdbc.update("DELETE FROM users");
+  com.campus.market.support.FinancialFixtureCleanup.clear(jdbc);jdbc.update("DELETE FROM market_orders");jdbc.update("DELETE FROM product_comments");jdbc.update("DELETE FROM product_favorites");jdbc.update("DELETE FROM purchase_intents");jdbc.update("DELETE FROM products");jdbc.update("DELETE FROM login_sessions");jdbc.update("DELETE FROM users");
   seller=user("order_seller");buyer=user("order_buyer");other=user("order_other");
   sellerToken=token(seller,"order_seller");buyerToken=token(buyer,"order_buyer");otherToken=token(other,"order_other");
   product=repository.insert("订单教材","原始描述",3500,seller,null,"BOOK");

@@ -29,9 +29,9 @@ disk_free_limit.absolute = 50MB
 default_user = {self.user}
 default_pass = {self.password}
 default_vhost = {self.vhost}
-default_permissions.configure = ^campus[.]order[.].*
-default_permissions.write = ^campus[.]order[.].*
-default_permissions.read = ^campus[.]order[.].*
+default_permissions.configure = ^campus[.](order|notification)[.].*
+default_permissions.write = ^campus[.](order|notification)[.].*
+default_permissions.read = ^campus[.](order|notification)[.].*
 ''');config.chmod(0o600)
         (self.root/'enabled_plugins').write_text('[].\n')
         (self.root/'env.conf').touch()

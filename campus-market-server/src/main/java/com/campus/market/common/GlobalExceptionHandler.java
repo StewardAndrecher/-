@@ -76,10 +76,45 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 .body(new ApiErrorResponse(exception.code(),exception.getMessage()));
     }
 
+    @ExceptionHandler(com.campus.market.admin.AdminAccessException.class)
+    public ResponseEntity<ApiErrorResponse> handleAdminAccess(com.campus.market.admin.AdminAccessException exception) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).cacheControl(CacheControl.noStore())
+                .body(new ApiErrorResponse("ADMIN_REQUIRED", exception.getMessage()));
+    }
+
+    @ExceptionHandler(com.campus.market.report.ReportException.class)
+    public ResponseEntity<ApiErrorResponse> handleReport(com.campus.market.report.ReportException exception) {
+        return ResponseEntity.status(exception.status()).cacheControl(CacheControl.noStore())
+                .body(new ApiErrorResponse(exception.code(),exception.getMessage()));
+    }
+
+    @ExceptionHandler(com.campus.market.auth.PasswordChangeException.class)
+    public ResponseEntity<ApiErrorResponse> handlePasswordChange(com.campus.market.auth.PasswordChangeException exception) {
+        return ResponseEntity.status(exception.status()).cacheControl(CacheControl.noStore())
+                .body(new ApiErrorResponse(exception.code(), exception.getMessage()));
+    }
+
+    @ExceptionHandler(com.campus.market.order.OrderReviewException.class)
+    public ResponseEntity<ApiErrorResponse> handleOrderReview(com.campus.market.order.OrderReviewException exception) {
+        return ResponseEntity.status(exception.status()).cacheControl(CacheControl.noStore())
+                .body(new ApiErrorResponse(exception.code(),exception.getMessage()));
+    }
+
+    @ExceptionHandler(com.campus.market.governance.PlatformException.class)
+    public ResponseEntity<ApiErrorResponse> handlePlatform(com.campus.market.governance.PlatformException ex) {
+        return ResponseEntity.status(ex.status()).header("Cache-Control","no-store").body(new ApiErrorResponse(ex.code(),ex.getMessage()));
+    }
+
     private static final Logger log =
             LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
 
+
+    @ExceptionHandler(com.campus.market.auth.SessionListException.class)
+    public ResponseEntity<ApiErrorResponse> handleSessionList(com.campus.market.auth.SessionListException exception) {
+        return ResponseEntity.badRequest().cacheControl(org.springframework.http.CacheControl.noStore())
+                .body(new ApiErrorResponse("INVALID_SESSION_QUERY",exception.getMessage()));
+    }
 
     @ExceptionHandler(LoginRequiredException.class)
     public ResponseEntity<ApiErrorResponse> handleLoginRequired(
@@ -93,7 +128,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleInvalidProduct(
             InvalidProductException exception
     ) {
-        return ResponseEntity.badRequest().body(
+        return ResponseEntity.badRequest().cacheControl(CacheControl.noStore()).body(
                 new ApiErrorResponse("INVALID_PRODUCT", exception.getMessage())
         );
     }
@@ -102,7 +137,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleProductNotFound(
             ProductNotFoundException exception
     ) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).cacheControl(CacheControl.noStore()).body(
                 new ApiErrorResponse("PRODUCT_NOT_FOUND", exception.getMessage())
         );
     }
@@ -111,7 +146,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleProductForbidden(
             ProductForbiddenException exception
     ) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).cacheControl(CacheControl.noStore()).body(
                 new ApiErrorResponse("PRODUCT_FORBIDDEN", exception.getMessage())
         );
     }
@@ -174,6 +209,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
         return ResponseEntity.status(status)
                 .headers(headers)
+                .cacheControl(CacheControl.noStore())
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(new ApiErrorResponse(code, message));
     }
@@ -219,13 +255,24 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     ) {
         // 详细原因保留在后端日志中，前端收到适合用户阅读的信息。
         log.error("处理请求失败", exception);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).cacheControl(CacheControl.noStore()).body(
                 new ApiErrorResponse(
                         "SERVER_ERROR",
                         "服务器暂时无法处理请求，请稍后重试"
                 )
         );
     }
+    @ExceptionHandler(com.campus.market.auth.RegistrationRateLimitedException.class)
+    public ResponseEntity<ApiErrorResponse> handleRegistrationLimited(com.campus.market.auth.RegistrationRateLimitedException e){
+        return ResponseEntity.status(429).cacheControl(CacheControl.noStore()).header("Pragma","no-cache")
+            .header("Retry-After",String.valueOf(e.retryAfterSeconds())).body(new ApiErrorResponse("REGISTRATION_RATE_LIMITED",e.getMessage()));
+    }
+    @ExceptionHandler(com.campus.market.auth.RegistrationProtectionUnavailableException.class)
+    public ResponseEntity<ApiErrorResponse> handleRegistrationUnavailable(com.campus.market.auth.RegistrationProtectionUnavailableException e){
+        return ResponseEntity.status(503).cacheControl(CacheControl.noStore()).header("Pragma","no-cache")
+            .header("Retry-After","5").body(new ApiErrorResponse("REGISTRATION_PROTECTION_UNAVAILABLE",e.getMessage()));
+    }
+
     @ExceptionHandler(com.campus.market.auth.LoginRateLimitedException.class)
     public ResponseEntity<ApiErrorResponse> handleLoginRateLimited(
             com.campus.market.auth.LoginRateLimitedException exception) {

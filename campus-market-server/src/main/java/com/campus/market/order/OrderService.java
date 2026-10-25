@@ -10,8 +10,9 @@ import static com.campus.market.order.OrderModels.*;
 @Service
 public class OrderService {
  @Value("${market.orders.simulated-payment-enabled:false}") private boolean simulatedPaymentEnabled;
+ private final com.campus.market.finance.FinancialEvidenceService finance;
  private final OrderRepository orders;private final ProductRepository products;private final SessionService sessions;private final ProductDetailCache cache;
- public OrderService(OrderRepository orders,ProductRepository products,SessionService sessions,ProductDetailCache cache){this.orders=orders;this.products=products;this.sessions=sessions;this.cache=cache;}
+ public OrderService(OrderRepository orders,ProductRepository products,SessionService sessions,ProductDetailCache cache,com.campus.market.finance.FinancialEvidenceService finance){this.finance=finance;this.orders=orders;this.products=products;this.sessions=sessions;this.cache=cache;}
  private void id(long value){if(value<1||value>9007199254740991L)throw OrderException.invalid("编号必须是有效正整数");}
  private OrderException missing(){return new OrderException(404,"ORDER_NOT_FOUND","订单不存在或无权查看");}
  @Transactional(isolation=Isolation.READ_COMMITTED)
@@ -22,6 +23,7 @@ public class OrderService {
   // 丢失响应重试先恢复原结果，包括已取消订单，不能重新占用商品。
   var replay=orders.request(buyer.id(),request.requestId());
   if(replay!=null){if(replay.productId()!=productId||replay.version()!=request.productVersion())throw OrderException.conflict("提交标识已用于另一笔商品信息，请刷新后重试");return new Receipt(orders.read(replay.id()),true);}
+  if(!simulatedPaymentEnabled)throw new OrderException(503,"PAYMENT_UNAVAILABLE","在线支付尚未开通，暂不接受新订单");
   if(product.seller()==null)throw OrderException.conflict("历史商品未登记卖家，暂不能下单");
   if(product.seller().id()==buyer.id())throw new OrderException(403,"SELF_ORDER","不能购买自己发布的商品");
   if(product.status()!=ProductStatus.ON_SALE)throw OrderException.conflict("商品当前不在售，不能下单");
@@ -68,6 +70,7 @@ public class OrderService {
    expireLocked(orderId,product);
    return new Receipt(orders.read(orderId),false);
   }
+  finance.simulatedPayment(orderId);
   if(orders.sell(product.id(),product.version())!=1)throw OrderException.conflict("商品状态已变化，模拟付款未完成");
   orders.append(orderId,"SIMULATED_PAYMENT","PENDING_PAYMENT","PAID","BUYER",buyerId,actor.nickname());
   cache.evictAfterCommit(product.id(),product.version());
@@ -93,6 +96,7 @@ public class OrderService {
   if(owned==null||(delivery?owned.sellerId():owned.buyerId())!=actorId)throw missing();
   if("COMPLETED".equals(owned.status())||(delivery&&"DELIVERED".equals(owned.status())))
    return new Receipt(orders.read(orderId),true);
+  orders.requireNoActiveRefund(orderId);
   String expected=delivery?"PAID":"DELIVERED";
   if(!expected.equals(owned.status()))throw OrderException.conflict(delivery?"只有已模拟付款、待交付的订单才能确认交付":"请等待卖家确认交付后，再确认收货");
   int changed=delivery?orders.deliver(orderId,actorId):orders.complete(orderId,actorId);
@@ -130,12 +134,13 @@ public class OrderService {
   return new Timeline(orders.read(orderId),orders.events(orderId));
  }
  @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
- public Page page(String role,String status,int page,int size,String auth) {
+ public Page page(String role,String status,int page,int size,String auth) {return page(role,status,"",page,size,auth);}
+ @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
+ public Page page(String role,String status,String rawOrder,int page,int size,String auth) {
   long userId=sessions.currentUser(auth).id();
-  if(!"BUYER".equals(role)&&!"SELLER".equals(role))throw OrderException.invalid("订单角色只能是BUYER或SELLER");
-  if(status==null||!java.util.Set.of("ALL","PENDING_PAYMENT","PAID","DELIVERED","COMPLETED","CANCELLED","CLOSED_TIMEOUT").contains(status))throw OrderException.invalid("订单筛选状态不合法");
+  Long exact=filterOrder(rawOrder);
+  boolean seller=sellerScope(role,status);
   if(page<1||page>1000000||size<1||size>20)throw OrderException.invalid("订单分页参数不合法");
-  boolean seller="SELLER".equals(role);
   // 统计和列表共享当前REPEATABLE_READ快照，汇总不受下方筛选/分页影响。
   var summary=orders.summary(userId,seller);
   long total=switch(status){
@@ -144,8 +149,21 @@ public class OrderService {
    case "CANCELLED"->summary.cancelled();case "CLOSED_TIMEOUT"->summary.closedTimeout();
    default->summary.total();
   };
+  if(exact!=null)total=orders.count(userId,seller,status,exact);
   int pages=(int)Math.max(1,(total+size-1)/size);int actual=Math.min(page,pages);
-  return new Page(orders.page(userId,seller,status,size,(long)(actual-1)*size),total,actual,size,pages,role,status,summary);
+  return new Page(orders.page(userId,seller,status,exact,size,(long)(actual-1)*size),total,actual,size,pages,role,status,exact,summary);
+ }
+ static boolean sellerScope(String role,String status) {
+  if(!"BUYER".equals(role)&&!"SELLER".equals(role))throw OrderException.invalid("订单角色只能是BUYER或SELLER");
+  if(status==null||!java.util.Set.of("ALL","PENDING_PAYMENT","PAID","DELIVERED","COMPLETED","CANCELLED","CLOSED_TIMEOUT").contains(status))throw OrderException.invalid("订单筛选状态不合法");
+  return "SELLER".equals(role);
+ }
+ static Long filterOrder(String raw) {
+  if(raw==null||(!raw.isEmpty()&&!raw.matches("[1-9][0-9]{0,15}")))throw OrderException.invalid("订单编号格式不正确");
+  if(raw.isEmpty())return null;
+  long value=Long.parseLong(raw);
+  if(value>9007199254740991L)throw OrderException.invalid("订单编号超出范围");
+  return value;
  }
  @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
  public State state(long productId,String auth){id(productId);var product=products.findById(productId).orElseThrow(()->new OrderException(404,"PRODUCT_NOT_FOUND","商品不存在或不在售"));Long userId=auth==null||auth.isBlank()?null:sessions.currentUser(auth).id();

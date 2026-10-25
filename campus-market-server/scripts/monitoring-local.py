@@ -63,6 +63,7 @@ elif args.action=='start':
   evaluation_interval: 5s
 rule_files:
   - '''+json.dumps(str(root/'monitoring/prometheus-alerts.yml'))+'''
+  - '''+json.dumps(str(root/'monitoring/notification-alerts.yml'),str(root/'monitoring/registration-alerts.yml'))+'''
 alerting:
   alertmanagers:
     - static_configs:

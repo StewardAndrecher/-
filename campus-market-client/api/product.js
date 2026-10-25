@@ -4,7 +4,7 @@ import { getToken } from '@/utils/session.js'
 export function getProducts({
   page = 1,
   size = 5,
-  keyword = '', category = '', sort = 'NEWEST'
+  keyword = '', category = '', sort = 'NEWEST', campus = ''
 } = {}) {
   return request({
     path: '/api/products',
@@ -13,7 +13,8 @@ export function getProducts({
       size,
       keyword,
       category,
-      sort
+      sort,
+      campus
     }
   })
 }
@@ -56,4 +57,8 @@ export async function getMyProductSummary() {
     throw new Error('发布概览响应格式不正确')
   }
   return data
+}
+
+export function getProductFeed({ cursor = '', size = 10, keyword = '', category = '' } = {}) {
+  return request({ path: '/api/products/feed', data: { cursor, size, keyword, category } })
 }

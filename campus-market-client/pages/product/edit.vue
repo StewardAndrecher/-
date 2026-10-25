@@ -25,7 +25,8 @@
       <input v-model="draftPrice" class="field" type="digit" :maxlength="9"
         :disabled="saving || uploadingCover" placeholder="例如：35.50" />
       <CategoryPicker v-model="draftCategory" :disabled="saving || uploadingCover" @ready="categoryReady = $event" />
-      <ImagePicker v-model="draftCoverId" :disabled="saving" @busy="uploadingCover = $event" />
+      <ProductDetailsFields v-model="draftDetails" :active="editActive" :disabled="saving" @cover="draftCoverId = $event" @busy="uploadingCover = $event" />
+      <PublishQualityChecklist :draft="{title:draftTitle,description:draftDescription,priceText:draftPrice,coverImageId:draftCoverId,categoryCode:draftCategory,details:draftDetails}" :active="editActive" :disabled="saving || uploadingCover" />
       <text v-if="errorMessage" class="error">{{ errorMessage }}</text>
       <button v-if="conflict" :disabled="saving || uploadingCover" @click="loadForEdit(true)">重新加载最新商品（替换草稿）</button>
       <button type="primary" :disabled="saving || uploadingCover || conflict || !categoryReady" :loading="saving" @click="saveProduct">
@@ -37,10 +38,12 @@
 </template>
 
 <script setup>
+import PublishQualityChecklist from '@/components/PublishQualityChecklist.vue'
 import { ref } from 'vue'
-import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
+import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import { getProduct, updateProduct } from '@/api/product.js'
-import ImagePicker from '@/components/ImagePicker.vue'
+import ProductDetailsFields from '@/components/ProductDetailsFields.vue'
+import { productDetails, legacyDetails } from '@/utils/product-details.mjs'
 import CategoryPicker from '@/components/CategoryPicker.vue'
 import { getCurrentUser } from '@/api/user.js'
 import { currentUser, getToken, updateCurrentUser } from '@/utils/session.js'
@@ -51,6 +54,8 @@ const draftTitle = ref('')
 const draftDescription = ref('')
 const draftPrice = ref('')
 const draftCoverId = ref('')
+const draftDetails = ref(legacyDetails())
+const editActive = ref(false)
 const draftCategory = ref('UNCLASSIFIED')
 const categoryReady = ref(false)
 const draftVersion = ref(null)
@@ -104,6 +109,7 @@ async function loadForEdit(discardDraft = false) {
       draftDescription.value = item.description
       draftPrice.value = (item.priceInCents / 100).toFixed(2)
       draftCoverId.value = item.coverImageId || ''
+      draftDetails.value = productDetails(item.details,item.coverImageId)
       draftCategory.value = item.category?.code || 'UNCLASSIFIED'
       draftVersion.value = item.version
       conflict.value = false
@@ -148,7 +154,7 @@ async function saveProduct() {
   if (priceInCents <= 0) { errorMessage.value = '价格必须大于0'; return }
   saving.value = true
   try {
-    const result = await updateProduct(productId.value, { title, description, priceInCents, coverImageId: draftCoverId.value, version: draftVersion.value, categoryCode: draftCategory.value })
+    const result = await updateProduct(productId.value, { title, description, priceInCents, coverImageId: draftCoverId.value, version: draftVersion.value, categoryCode: draftCategory.value, details: productDetails(draftDetails.value,draftCoverId.value) })
     if (pageClosed || getToken() !== token) return
     if (!isValidProduct(result) || result.seller?.id !== editorId) {
       throw new Error('修改结果格式异常，请返回详情重新加载确认')
@@ -200,7 +206,8 @@ onLoad((options) => {
   if (!Number.isSafeInteger(id) || id <= 0) { loadError.value = '商品ID不正确'; return }
   productId.value = id
 })
-onShow(() => loadForEdit())
+onShow(() => { editActive.value=true;return loadForEdit() })
+onHide(() => { editActive.value=false })
 onUnload(() => { pageClosed = true })
 </script>
 

@@ -118,7 +118,7 @@ class ProductEditIntegrationTest {
         assertEquals("成色良好", updated.get("description").asText());
         assertEquals(1250, updated.get("priceInCents").asLong());
         assertEquals(sellerId, updated.get("seller").get("id").asLong());
-        assertEquals(2, updated.get("seller").size());
+        assertEquals(5, updated.get("seller").size());
         assertEquals(createdAt, jdbc.queryForObject("SELECT created_at FROM products WHERE id=?", java.sql.Timestamp.class, productId));
         assertEquals(2, count());
         assertEquals("修改后的台灯", check(get("/api/products/" + productId), 200).get("title").asText());

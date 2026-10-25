@@ -108,7 +108,7 @@ class ProductOwnershipIntegrationTest {
                 .header("Authorization", "Bearer " + token).content(mapper.writeValueAsString(body)), 201);
         assertEquals(sellerId, product.get("seller").get("id").asLong());
         assertEquals("测试卖家甲", product.get("seller").get("nickname").asText());
-        assertEquals(2, product.get("seller").size());
+        assertEquals(5, product.get("seller").size());
         assertEquals(sellerId, jdbc.queryForObject("SELECT seller_id FROM products WHERE id=?",
                 Long.class, product.get("id").asLong()));
         assertEquals(2, count());

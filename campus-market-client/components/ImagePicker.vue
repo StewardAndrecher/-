@@ -1,6 +1,7 @@
 <template>
   <view class="picker">
-    <text>商品封面（可选，PNG/JPG，最大5MB、宽高不超过2000像素）</text>
+    <text class="picker-label">商品封面 <text class="optional">可选</text></text>
+    <text class="picker-hint">PNG / JPG · 最大5MB · 宽高不超过2000像素</text>
     <image v-if="imageUrl(modelValue)" class="preview" :src="imageUrl(modelValue)" mode="aspectFit" />
     <button size="mini" :disabled="disabled || uploading" @click="choose">
       {{ uploading ? '上传中…' : '选择封面图片' }}
@@ -54,8 +55,11 @@ onUnmounted(() => { closed = true })
 </script>
 
 <style scoped>
-.picker { margin: 24rpx 0; }
-.preview { display: block; width: 100%; height: 280rpx; margin: 20rpx 0; }
-.error { display: block; color: #d93025; margin-top: 16rpx; }
-button { margin-top: 16rpx; }
+.picker { margin: 20px 0; padding: 14px; border: 1px dashed #cedbf0; border-radius: 10px; background: #fbfcff; }
+.picker-label { display: block; color: #5c708f; font-size: 12px; font-weight: 600; }
+.optional { font-size: 10px; color: #9ba9bc; font-weight: 400; margin-left: 5px; }
+.picker-hint { display: block; color: #97a4b8; font-size: 10px; line-height: 1.8; margin: 7px 0 9px; }
+.preview { display: block; width: 100%; height: 160px; margin: 12px 0; border-radius: 8px; }
+.error { display: block; color: #b42318; font-size: 12px; margin-top: 10px; }
+button { margin: 4px 6px 0 0; font-size: 11px; min-height: 31px; line-height: 29px; }
 </style>

@@ -40,8 +40,11 @@ public class DraftBackupService {
  @Transactional
  public Saved save(String id,SaveRequest request,String auth) {
   long owner=sessions.currentUser(auth).id();validateId(id);validate(request);
-  images.requireOwned(request.content().coverImageId(),owner);
   repository.lockOwner(owner);
+  images.requireOwned(request.content().coverImageId(),owner);
+  var details=com.campus.market.product.ProductDetails.validate(request.content().details(),request.content().coverImageId());
+  for(String image:details.imageIds())images.requireOwned(image,owner);
+  if(request.content().details()!=null&&!details.equals(request.content().details()))throw DraftBackupException.invalid();
   var previous=repository.find(owner,id);
   if(previous.isPresent()) {
    var saved=previous.get();
@@ -72,6 +75,7 @@ public class DraftBackupService {
   var c=r.content();
   if(c.title()==null||c.title().length()>50||c.description()==null||c.description().length()>500||c.priceText()==null||!c.priceText().matches("[0-9.]{0,9}")||c.coverImageId()==null||c.categoryCode()==null||!CATEGORIES.contains(c.categoryCode())) throw DraftBackupException.invalid();
   if(!c.coverImageId().isEmpty()) validateId(c.coverImageId());
-  if(c.title().isBlank()&&c.description().isBlank()&&c.priceText().isEmpty()&&c.coverImageId().isEmpty()&&c.categoryCode().equals("OTHER")) throw DraftBackupException.invalid();
+  var details=com.campus.market.product.ProductDetails.validate(c.details(),c.coverImageId());
+  if(c.title().isBlank()&&c.description().isBlank()&&c.priceText().isEmpty()&&c.coverImageId().isEmpty()&&c.categoryCode().equals("OTHER")&&details.campusCode().equals("UNSPECIFIED")&&details.conditionCode().equals("UNSPECIFIED")&&details.handoverLocation().isBlank()) throw DraftBackupException.invalid();
  }
 }

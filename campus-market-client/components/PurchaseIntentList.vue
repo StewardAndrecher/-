@@ -91,17 +91,24 @@ const writing = ref(false), cancelId = ref(0), acceptId = ref(0)
 let generation = 0, closed = false
 function statusLabel(status) { return { PENDING: '待沟通', CANCELLED: '已取消', ACCEPTED: '已接受' }[status] || '未知状态' }
 function money(cents) { return (cents / 100).toFixed(2) }
-watch(() => currentUser.value?.id, () => {
-  generation++; writing.value = false; cancelId.value = 0; acceptId.value = 0; expanded.value = false; loading.value = false; loaded.value = false; stale.value = false
-  receivedMessageTimes.value = null; sort.value = 'NEWEST'; summary.value = null; unread.value = null; overview.value = null; unreadOnly.value = false; statusFilter.value = ''; role.value = 'BUYER'; page.value = 1; totalPages.value = 1; total.value = 0; items.value = []; message.value = ''
-})
+function resetPrivateState() {
+  generation++
+  writing.value = false; cancelId.value = 0; acceptId.value = 0
+  expanded.value = false; loading.value = false; loaded.value = false; stale.value = false
+  receivedMessageTimes.value = null; sort.value = 'NEWEST'
+  summary.value = null; unread.value = null; overview.value = null
+  unreadOnly.value = false; statusFilter.value = ''; role.value = 'BUYER'
+  page.value = 1; totalPages.value = 1; total.value = 0; items.value = []; message.value = ''
+}
+// saveSession replaces currentUser even when the account ID stays the same.
+watch(() => [currentUser.value?.id, getToken()], (next, previous) => {
+  if (previous && next[0] === previous[0] && next[1] === previous[1]) return
+  resetPrivateState()
+}, { flush: 'sync' })
 watch(() => props.active, active => {
-  if (!active) {
-    generation++; loading.value = false; writing.value = false; cancelId.value = 0; acceptId.value = 0
-    stale.value = loaded.value
-    if (loaded.value) message.value = '返回页面后请刷新购买意向，再确认当前状态'
-  }
-})
+  if (!active) resetPrivateState()
+}, { flush: 'sync' })
+
 function toggle() {
   if (closed || props.active === false || props.disabled || loading.value || writing.value || !currentUser.value) return
   expanded.value = !expanded.value
@@ -210,7 +217,7 @@ async function changeIntent(item, isAccept) {
     }
   } finally { if (stillCurrent()) { writing.value = false; cancelId.value = 0; acceptId.value = 0 } }
 }
-onUnmounted(() => { closed = true; generation++ })
+onUnmounted(() => { closed = true; resetPrivateState() })
 </script>
 
 <style scoped>

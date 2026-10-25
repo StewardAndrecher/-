@@ -17,7 +17,7 @@ scoped样式应保留。修复构建流程后，完整的WXML、WXSS、JS来自�
 在终端执行：
 
 ```sh
-cd campus-market-client
+cd /path/to/campus-market-client
 ./tools/build.sh all
 ```
 
@@ -31,11 +31,11 @@ cd campus-market-client
 
 微信开发者工具导入目录为：
 
-`campus-market-client/unpackage/verified/mp-weixin`
+`/path/to/campus-market-client/unpackage/verified/mp-weixin`
 
 网页静态构建目录为：
 
-`campus-market-client/unpackage/verified/h5`
+`/path/to/campus-market-client/unpackage/verified/h5`
 
 第41课增加 App 资源目录 `unpackage/verified/app`。`all` 现在顺序编译网页、微信、App三个平台；App资源不是APK/IPA，也不能当网页打开。
 
